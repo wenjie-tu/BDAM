@@ -1,0 +1,7 @@
+model{
+      theta ~ dbeta(1, 1)    # (uniform) prior
+      
+      for (i in 1:Ntotal) {
+        y[i] ~ dbern(theta)  # likelihood 
+      }
+  }

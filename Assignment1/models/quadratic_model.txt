@@ -1,0 +1,11 @@
+model{
+    a ~ dnorm(0, 0.00001)        # prior for the intercept
+    b ~ dnorm(0, 0.00001)        # prior for the slope
+    c ~ dnorm(0, 0.00001)        # prior for the quadratic term
+    sigma ~ dunif(0.00001, 100)  # prior for the sd of y
+    
+    for (i in 1:Ntotal) {
+      mu[i] <- a + b * x[i] + c * x[i]^2
+      y[i] ~ dnorm(mu[i], 1/(sigma^2))
+    }
+}
