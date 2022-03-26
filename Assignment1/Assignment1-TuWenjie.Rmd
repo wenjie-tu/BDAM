@@ -169,10 +169,8 @@ chainGenerator <- function(start,          # starting point
     ## Compare the probability of moving to a uniform draw from 0 to 1
     if (prob.move > runif(1, min=0, max=1)) {
       chain[i+1] <- theta.pro # accept the proposed sample 
-    }
-    else {
+    } else {
       chain[i+1] <- theta.cur # reject the proposed sample
-      
     }
   }
   return(chain)
@@ -200,14 +198,14 @@ chains.r <- data.frame(
 ```{r}
 ggplot(chains.r, aes(x=iteration, y=theta, col=chainType)) + 
   geom_line() + # geom_point() + 
-  ggtitle("Overlaying trace plots of three chains") + 
+  ggtitle("Trace plots of three chains") + 
   theme_minimal()
 ```
 
 ```{r}
 ggplot(chains.r, aes(x=theta, col=chainType, fill=chainType)) +
   geom_density(alpha=0.2) + 
-  labs(title="Overlaying density plots of three chains") +
+  labs(title="Density plots of three chains") +
   theme_minimal()
 ```
 
@@ -307,7 +305,8 @@ results <- run.jags(
 ```
 
 ```{r}
-knitr::kable(summary(results), caption="Summary results")
+## Print the summary results of the Metropolis algorithm in a table
+knitr::kable(summary(results), caption="Summary results of the Metropolis algorithm")
 ```
 
 
@@ -354,7 +353,7 @@ d.plot <- data.frame(
 
 ggplot(d.plot, aes(x=theta, color=method, fill=method)) + 
   geom_density(alpha=0.2) + theme_minimal() + 
-  labs(title="Density plots overlayed from R and JAGS")
+  labs(title="Density plots from R and JAGS")
 ```
 
 ```{r}
@@ -490,8 +489,8 @@ ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
 
 $$
 \begin{aligned}
-\text{Null hypothesis: }\quad & \mu\leq 100 \\
-\text{Alternative hypothesis: }\quad & \mu>100
+H_0: \quad & \mu\leq 100 \\
+H_1: \quad & \mu>100
 \end{aligned}
 $$
 
@@ -499,11 +498,15 @@ $$
 ## Compute the empirical cumulative distribution function
 Fn <- ecdf(d.chains$mu)
 
-## Calculate P[mu<100] from empirical CDF
+## Calculate P[mu < 100] from empirical CDF
 p.value <- Fn(100); p.value
+
+## Alternatively
+p.value <- mean(d.chains$mu<100); p.value
 ```
 
 * `ecdf()` function is used to compute the empirical cumulative distribution function and 100 is passed to the empirical CDF to calculate the $p$-value (i.e. $P(\mu<100)$)
+* Alternatively, `mean()` function can also be used to compute the $p$-value since it returns the proportion of samples satisfying the condition
 * $P(\mu<100)=0.009$. Therefore, we can conclude that the expected value of IQ score is statistically larger than 100 at the significance level of 0.009
 
 #### 3 (b) _Cohen's d_
@@ -522,7 +525,7 @@ d.table <- data.frame(
   Reference=c("Sawilowsky, 2009", "Cohen, 1988", "Cohen, 1988", 
               "Cohen, 1988", "Sawilowsky, 2009", "Sawilowsky, 2009")
 )
-knitr::kable(d.table, caption="Effect Size Metric")
+knitr::kable(d.table, caption="Effect Size Metric", align="c")
 ```
 
 The _cohen's d_ is around 0.3. According to the effect size metric in the table above, we can conclude the effect size is between small and medium.
@@ -544,8 +547,11 @@ ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
 ## Compute the empirical cumulative distribution function
 Fn <- ecdf(cohen.d)
 
-## Calculate P[d<100] from empirical CDF
+## Calculate P[d<0] from empirical CDF
 p.value <- Fn(0); p.value
+
+## Alternatively
+p.value <- mean(cohen.d < 0); p.value
 ```
 
 $~$
