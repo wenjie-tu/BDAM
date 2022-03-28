@@ -10,13 +10,17 @@ output:
     toc_float: true
 ---
 
+$~$
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 Sys.setenv(lang="us_en")
 rm(list=ls())
 ```
 
-### Six Dice Game
+### 1 Six Dice Game
+
+#### 1(a) Theoretical expected payoff
 
 $$
 P(X=k)=\binom{n}{k}p^{k}(1-p)^{n-k}
@@ -34,9 +38,9 @@ colnames(dat) <- c("Outcome", "Probability", "Payoff")
 
 n <- nrow(dat)
 for (k in 1:n) {
-  dat[k, 1] <- k
-  dat[k, 2] <- choose(n, k) * (1/6)^k * (5/6)^(n-k)
-  dat[k, 3] <- 0.5*(1+k)
+  dat[k, 1] <- k # the number dice showing 6 on the top face
+  dat[k, 2] <- choose(n, k) * (1/6)^k * (5/6)^(n-k) # probability
+  dat[k, 3] <- 0.5*(1+k) # payoff
 }
 ```
 
@@ -45,12 +49,15 @@ knitr::kable(dat, align="c", caption="Six dice game")
 ```
 
 ```{r}
+## Expected payoff of playing this game
 expected.payoff <- with(dat, Probability %*% Payoff)[1]; expected.payoff
 ```
 
 We see that the expected payoff of playing this game is 0.833, which is smaller than the initial cost (i.e. 1) for playing such a game. Therefore, it is not a good idea to play this game.
 
-Monte Carlo simulation:
+#### 1(b) Monte Carlo simulation
+
+One can repeatedly play this game for thousands of times. A Monte Carlo simulation can be conducted to model this procedure.
 
 ```{r}
 ## Set seed for reproducible results
@@ -61,13 +68,13 @@ cost <- 1          # the initial cost of playing the game one time
 
 ## Generate a data frame for plotting
 d.payoff <- data.frame(matrix(nrow=iterations, ncol=3)) 
-colnames(d.payoff) <- c("Iterations", "Payoff", "CumExp")
+colnames(d.payoff) <- c("Iterations", "Payoff", "Expectation")
 
 for (i in 1:iterations) {
   ## Roll 6 dice and store the outcome
-  outcome <- sample(1:6, 6, replace=TRUE)
+  outcome <- sample(1:6, size=6, replace=TRUE)
   
-  ## Compute the number of dice landing with 6
+  ## Compute the number of dice landing with 6 each time
   n.six <- sum(outcome==6)
   
   ## Store the iteration index in the first column
@@ -80,7 +87,7 @@ for (i in 1:iterations) {
     d.payoff[i, 2] <- 0.5*(1+n.six)
   }
   
-  ## Compute the cumulative expected payoff in the third column
+  ## Compute the expected payoff in the third column
   d.payoff[i, 3] <- mean(d.payoff[1:i, 2])
 }
 ```
@@ -95,40 +102,33 @@ library(gifski)
 
 
 ```{r}
-ggplot(d.payoff, aes(x=Iterations, y=CumExp)) + 
+ggplot(d.payoff, aes(x=Iterations, y=Expectation)) + 
   geom_line(color=6) + 
   geom_point(color=6) + 
   geom_hline(yintercept=expected.payoff, color=4, linetype="longdash") +
   geom_text(aes(0, expected.payoff, label="theoretical expected payoff", vjust=1.2, hjust=-0.5), color=4) +
   geom_hline(yintercept=cost, color=2, linetype="longdash") + 
   geom_text(aes(0, cost, label="initial cost", vjust=1.2, hjust=-1.5), color=2) + 
-  labs(title="Monte Carlo simulation", x="Iterations", y="Cumulative expected payoff") + 
+  labs(title="Monte Carlo simulation", x="Iterations", y="Empirical expected payoff") + 
   theme_minimal() + 
   transition_reveal(Iterations)
 ```
 
 $~$
 
-### Metropolis Algorithm
+### 2 Metropolis Algorithm
 
-$$
-\begin{aligned}
-p_\text{move}
-&= \min\left(1,
-\frac{\text{posterior pribability of }\theta_\text{pro}}{\text{posterior pribability of }\theta_\text{cur}}
-\right) \\
-&= \min\left(1, \frac{\text{Binomial}(z,N\mid \theta_\text{pro})\cdot\text{Beta}(\theta_\text{pro}\mid a,b)}{\text{Binomial}(z,N\mid \theta_\text{cur})\cdot\text{Beta}(\theta_\text{cur}\mid a,b)} \right)
-\end{aligned}
-$$
+Metropolis algorithm works as follows:
 
-* $\theta_\text{cur}$: the current position of theta
-* $\theta_\text{pro}$: the proposed move, which is given by random draws from a normal distribution $\mathcal{N}(\theta_\text{cur},0.2^2)$
+* Initialize a starting point as the current position (denoted by $\theta_\text{cur}$)
+* Propose a $\theta_\text{pro}$ generated from a normal distribution with a mean of previous $\theta$ and a standard deviation of 0.2
 
-$$
-\theta_\text{pro}\sim\mathcal{N}(\theta_\text{cur}, 0.2^2)
-$$
+  $$\theta_\text{pro}\sim\mathcal{N}(\theta_\text{cur}, 0.2^2)$$
+  + We are modeling the probability distribution of the number of heads in a sequence of $N=20$ independent coin-flipping game with two possible outcomes (i.e. binomial distribution)
+  + The parameter of interest ($\theta$) must be bounded between 0 and 1
+  + Therefore, we refine the proposed distribution:
 
-$$
+    $$
 \theta_\text{pro}=
 \begin{cases}
 0, & \theta_\text{pro}<0 \\
@@ -137,7 +137,26 @@ $$
 \end{cases}
 $$
 
-#### 2(a) _Metropolis algorithm implementation with R_
+* Compute the prior probabilities of $\theta_\text{cur}$ and $\theta_\text{pro}$
+  + Since we have a flat prior over $\theta$ (i.e. $\text{Beta}(1,1)$ is the beta form of uniform distribution), we can simply drop out the priors when computing the posteriors
+* Compute the likelihood functions of $\theta_\text{cur}$ and $\theta_\text{pro}$ (binomial distribution)
+* Compute the posterior probabilities of $\theta_\text{cur}$ and $\theta_\text{pro}$ (posterior is proportional to the likelihood function times the prior)
+* Compute the acceptance ratio $p_\text{move}$
+
+  $$
+\begin{aligned}
+p_\text{move}
+&= \min\left(1,
+\frac{\text{posterior pribability of }\theta_\text{pro}}{\text{posterior pribability of }\theta_\text{cur}}
+\right) \\
+&= \min\left(1, \frac{\text{Binomial}(z,N\mid \theta_\text{pro})\cdot\text{Beta}(\theta_\text{pro}\mid a,b)}{\text{Binomial}(z,N\mid \theta_\text{cur})\cdot\text{Beta}(\theta_\text{cur}\mid a,b)} \right)
+\end{aligned}
+$$
+  + If $p_\text{move}\geq 0$, then accept the sample for sure by setting $\theta_\text{cur}$ to $\theta_\text{pro}$
+  + If $p_\text{move}< 0$, then accept the sample with a probability of $p_\text{move}$. We proceeds by generating a uniform random number $u\in[0, 1]$. We accept the sample if $p_\text{move}>u$, otherwise we reject the sample by staying in the current island (setting $\theta_\text{cur}$ to $\theta_\text{cur}$)
+
+
+#### 2(a) Implementation with R
 
 ```{r}
 ## Set seed for reproducible results
@@ -145,11 +164,12 @@ set.seed(2022)
 
 ## Function: chainGenerator()
 ## Arguments: start, n.samples, sigma, N, z, a, b
-chainGenerator <- function(start,          # starting point
-                           n.samples=5000, # total number of samples generated
-                           sigma=0.2,      # standard deviation for the random draws
-                           N=20, z=14,     # parameters for the binomial distribution
-                           a=1, b=1        # parameters for the Beta distribution
+chainGenerator <- function(
+    start,          # starting point
+    n.samples=5000, # total number of samples generated
+    sigma=0.2,      # standard deviation for the random draws
+    N=20, z=14,     # parameters for the binomial distribution
+    a=1, b=1        # parameters for the Beta distribution
   ) {
   chain <- numeric(n.samples) # initialize a vector to store samples
   chain[1] <- start           # set the first position of the vector to the starting point
@@ -184,7 +204,7 @@ chain2 <- chainGenerator(start = 0.9)
 chain3 <- chainGenerator(start = 0.5)
 ```
 
-#### 2(b) _Visualization of three MCMC chains overlaid_
+#### 2(b) Overlaying three chains
 
 ```{r}
 chains.r <- data.frame(
@@ -195,35 +215,31 @@ chains.r <- data.frame(
 )
 ```
 
-```{r}
+```{r, fig.show="hold", out.width="50%"}
 ggplot(chains.r, aes(x=iteration, y=theta, col=chainType)) + 
-  geom_line() + # geom_point() + 
+  geom_line(alpha=0.5) + # geom_point() + 
   ggtitle("Trace plots of three chains") + 
   theme_minimal()
-```
 
-```{r}
 ggplot(chains.r, aes(x=theta, col=chainType, fill=chainType)) +
   geom_density(alpha=0.2) + 
-  labs(title="Density plots of three chains") +
+  labs(title="Densities of three chains") +
   theme_minimal()
 ```
 
-By overlaying trace plots of three chains, we can easily see that the three chains converge to the same posterior distribution. To see it more clear, we overlay density plots of three chains and the densities overlap quite a bit.
+By overlaying trace plots of three chains, we can easily see that the three chains converge to the same posterior distribution. To see it more clear, we overlay densities of three chains and the densities overlap quite a bit.
 
-#### 2(c) _Visualization of three MCMC chains concatenated_
+#### 2(c) Concatenating three chains
 
-```{r}
+```{r, fig.show="hold", out.width="50%"}
+ggplot(chains.r, aes(x=index, y=theta, col=chainType)) + 
+  geom_line(alpha=0.5) + # geom_point() + 
+  ggtitle("Trace plot of three chains concatenated") + 
+  theme_minimal()
+
 ggplot(chains.r, aes(x=theta)) +
   geom_density(alpha=0.2, color="darkblue", fill="lightblue") + 
   labs(title="Density plot of three chains concatenated") +
-  theme_minimal()
-```
-
-```{r}
-ggplot(chains.r, aes(x=index, y=theta, col=chainType)) + 
-  geom_line() + # geom_point() + 
-  ggtitle("Trace plot of three chains concatenated") + 
   theme_minimal()
 ```
 
@@ -233,7 +249,7 @@ source("./scripts/HDIofMCMC.r")
 hdi.r <- HDIofMCMC(chains.r$theta, credMass=0.95); hdi.r
 ```
 
-```{r}
+```{r, fig.align="center"}
 d.plot <- with(density(chains.r$theta), data.frame(x, y))
 ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
   geom_line(color="darkblue") +
@@ -247,7 +263,7 @@ ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
 
 It is a bit difficult to visually tell from the density plot whether the red vertical line $\theta=0.5$ is within the 95% HDI but numerically we see that 0.5 is within the 95% HDI.
 
-#### 2(d) _Metropolis algorithm implementation with JAGS_
+#### 2(d) Implementation with JAGS
 
 ```{r}
 library(rjags)
@@ -309,18 +325,15 @@ results <- run.jags(
 knitr::kable(summary(results), caption="Summary results of the Metropolis algorithm")
 ```
 
-
-```{r}
+```{r, fig.align="center"}
 chains.jags <- data.frame(
   chainType=rep(c("chain1", "chain2", "chain3"), each=2500), 
   index=rep(seq(2501, length.out=2500), times=3), 
   theta=rbind(results$mcmc[[1]], results$mcmc[[2]], results$mcmc[[3]])
 )
-```
 
-```{r}
 ggplot(data=chains.jags) + 
-  geom_line(aes(x=index, y=theta, color=chainType)) + 
+  geom_line(aes(x=index, y=theta, color=chainType), alpha=0.5) + 
   labs(title="Trace of theta", x="Iterations") + 
   theme_minimal()
 ```
@@ -329,7 +342,7 @@ ggplot(data=chains.jags) +
 hdi.jags <- HDIofMCMC(chains.jags$theta, credMass=0.95); hdi.jags
 ```
 
-```{r}
+```{r, fig.align="center"}
 d.plot <- with(density(chains.jags$theta), data.frame(x, y))
 ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
   geom_line(color="darkblue") +
@@ -345,7 +358,7 @@ ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
 
 We are able to visually detect that the red vertical line $\theta=0.5$ is within the 95% HDI (blue shaded density).
 
-```{r}
+```{r, fig.align="center"}
 d.plot <- data.frame(
   theta=c(chains.r$theta, chains.jags$theta), 
   method=rep(c("R", "JAGS"), each=7500)
@@ -353,7 +366,7 @@ d.plot <- data.frame(
 
 ggplot(d.plot, aes(x=theta, color=method, fill=method)) + 
   geom_density(alpha=0.2) + theme_minimal() + 
-  labs(title="Density plots from R and JAGS")
+  labs(title="Densities from R and JAGS")
 ```
 
 ```{r}
@@ -365,7 +378,7 @@ Metropolis algorithm implementation with both R and JAGS leads to the same concl
 
 $~$
 
-### IQ Test
+### 3 IQ Test
 
 ```{r libraries, message=FALSE, warning=FALSE}
 # Load the required libraries
@@ -374,18 +387,17 @@ library(runjags)
 source("./scripts/HDIofMCMC.r") # Load the HDI function
 ```
 
-```{r}
+```{r, fig.align="center"}
 ## Read in the data
 df <- read.csv("./scripts/TwoGroupIQ.csv")
 
 ggplot(subset(df, subset=Group=="Smart Drug", select="Score"), aes(x=Score)) + 
-  geom_histogram(bins=30, fill="#69b3a2", color="#e9ecef", alpha=0.9) + 
+  geom_histogram(bins=30, fill="#69b3a2", color="#e9ecef", alpha=0.5) + 
   ggtitle("Histogram of the IQ Score") +
   theme_minimal()
 ```
 
-#### 3 (a) _Expected IQ score greater than 100_
-
+#### 3 (a) Expected IQ score > 100 ?
 
 ```{r}
 ## For purposes of this one-group example, use data from Smart Drug group:
@@ -435,7 +447,7 @@ d.chains <- data.frame(
 ```{r}
 ## Trace plot of mu
 trace.mu <- ggplot(data=d.chains) + 
-  geom_line(aes(x=index, y=mu, color=chainType)) + 
+  geom_line(aes(x=index, y=mu, color=chainType), alpha=0.5) + 
   labs(title="Trace of mu", x="Iterations") + 
   theme_minimal()
 
@@ -447,7 +459,7 @@ density.mu <- ggplot(d.chains) +
 
 ## Trace plot of sigma
 trace.sigma <- ggplot(data=d.chains) + 
-  geom_line(aes(x=index, y=sigma, color=chainType)) + 
+  geom_line(aes(x=index, y=sigma, color=chainType), alpha=0.5) + 
   labs(title="Trace of sigma", x="Iterations") + 
   theme_minimal()
 
@@ -458,7 +470,7 @@ density.sigma <- ggplot(d.chains) +
   theme_minimal()
 ```
 
-```{r}
+```{r, fig.show="hold", out.width="50%"}
 trace.mu; density.mu; trace.sigma; density.sigma
 ```
 
@@ -467,7 +479,7 @@ trace.mu; density.mu; trace.sigma; density.sigma
 hdi.mu <- HDIofMCMC(d.chains$mu, credMass=0.95); hdi.mu
 ```
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, fig.align="center"}
 d.plot <- with(density(d.chains$mu), data.frame(x, y))
 ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
   geom_line(color="darkblue") +
@@ -509,7 +521,7 @@ p.value <- mean(d.chains$mu<100); p.value
 * Alternatively, `mean()` function can also be used to compute the $p$-value since it returns the proportion of samples satisfying the condition
 * $P(\mu<100)=0.009$. Therefore, we can conclude that the expected value of IQ score is statistically larger than 100 at the significance level of 0.009
 
-#### 3 (b) _Cohen's d_
+#### 3 (b) Cohen's d
 
 ```{r}
 cohen.d <- with(d.chains, (mu-100)/sigma)
@@ -530,7 +542,7 @@ knitr::kable(d.table, caption="Effect Size Metric", align="c")
 
 The _cohen's d_ is around 0.3. According to the effect size metric in the table above, we can conclude the effect size is between small and medium.
 
-```{r}
+```{r, fig.align="center"}
 d.plot <- with(density(cohen.d), data.frame(x, y))
 ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
   geom_line(color="darkblue") +
@@ -556,7 +568,7 @@ p.value <- mean(cohen.d < 0); p.value
 
 $~$
 
-### Model Comparison
+### 4 Model Comparison
 
 ```{r, message=FALSE, warning=FALSE}
 # Load the libraries
@@ -567,18 +579,20 @@ library(ggplot2)   # plotting library
 library(GGally)    # plotting library
 ```
 
-#### 4(a) _Visualization of the raw data_
+#### 4(a) Visualization of raw data
 
-```{r}
+```{r, fig.align="center"}
 # Load the data
 load("dataFit.RData")
 
-# put the data into a data frame (to plot with ggplot)
+# Put the data into a data frame (to plot with ggplot)
 df <- data.frame(x = x, y = y)
-ggpairs(df) + ggtitle("Pairs plot") + theme_minimal()
+ggpairs(df, aes(x=x, y=y, color="Corr", alpha=0.2)) + 
+  ggtitle("Pairs plot") + theme_minimal() + 
+  scale_colour_manual(values = "red")
 ```
 
-#### 4(b) _Fitting different models_
+#### 4(b) Fitting different models
 
 Null model:
 $$
@@ -720,16 +734,16 @@ if (exists("results2")) {
 
 ```{r}
 ## Summary results for null model
-knitr::kable(summary(results0), caption="Summary results for the null model")
+knitr::kable(summary(results0), caption="Summary results for the null model", digits=4)
 
 ## Summary results for linear model
-knitr::kable(summary(results1), caption="Summary results for the linear model")
+knitr::kable(summary(results1), caption="Summary results for the linear model", digits=4)
 
 ## Summary results for quadratic model
-knitr::kable(summary(results2), caption="Summary results for the quadratic model")
+knitr::kable(summary(results2), caption="Summary results for the quadratic model", digits=4)
 ```
 
-#### 4(c) _Visualization of real data and model predictions_
+#### 4(c) Visualization of data and predictions
 
 ```{r}
 ## Extract parameters from the summary results
@@ -764,15 +778,12 @@ y1.pred <- a1 + b1 * x.grid
 y2.pred <- a2 + b2 * x.grid + c2 * x.grid^2
 ```
 
-
-```{r}
+```{r, fig.align="center"}
 d.plot <- data.frame(x=c(x.grid, x.grid, x.grid, x), 
                      y=c(y0.pred, y1.pred, y2.pred, y), 
                      type=rep(c("null", "linear", "quadratic", "data"), 
                               times=c(rep(len, 3), length(x))))
-```
 
-```{r}
 ggplot() +
   geom_line(data=d.plot[d.plot$type!="data", ], aes(x=x, y=y, color=type)) + 
   geom_point(data=d.plot[d.plot$type=="data", ], aes(x=x, y=y, color=type)) + 
@@ -782,7 +793,7 @@ ggplot() +
 
 The figure displays three fits overlaid in the scatter plot of raw data. It is clear that the quadratic model fits the data the best against the other two.
 
-#### _4(d) Deviance information certerion_
+#### 4(d) Deviance information certerion
 
 $$
 \texttt{DIC = mean(deviance) + (SD(deviance)^2)/2}
@@ -812,4 +823,4 @@ rownames(d.dic) <- "DIC"
 knitr::kable(d.dic, align="c", caption="DICs for three models")
 ```
 
-The lower DIC indicates a better fit to the data. The table shows that the quadratic model yields the smallest DIC, thus the best fit out of three models, which is also consistent with what the plot shows.
+The lower DIC indicates a better fit to the data. The table shows that the quadratic model yields the smallest DIC, thus the best fit out of three models, which is also consistent with what we see visually from the plot.
