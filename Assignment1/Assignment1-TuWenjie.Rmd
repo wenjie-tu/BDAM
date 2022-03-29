@@ -20,6 +20,8 @@ rm(list=ls())
 
 ### 1 Six Dice Game
 
+$~$
+
 #### 1(a) Theoretical expected payoff
 
 $$
@@ -54,6 +56,8 @@ expected.payoff <- with(dat, Probability %*% Payoff)[1]; expected.payoff
 ```
 
 We see that the expected payoff of playing this game is 0.833, which is smaller than the initial cost (i.e. 1) for playing such a game. Therefore, it is not a good idea to play this game.
+
+$~$
 
 #### 1(b) Monte Carlo simulation
 
@@ -134,8 +138,7 @@ Metropolis algorithm works as follows:
 0, & \theta_\text{pro}<0 \\
 \theta_\text{pro}, & 0<\theta_\text{pro}<1 \\
 1, & \theta_\text{pro}>1 \\
-\end{cases}
-$$
+\end{cases}$$
 
 * Compute the prior probabilities of $\theta_\text{cur}$ and $\theta_\text{pro}$
   + Since we have a flat prior over $\theta$ (i.e. $\text{Beta}(1,1)$ is the beta form of uniform distribution), we can simply drop out the priors when computing the posteriors
@@ -143,18 +146,17 @@ $$
 * Compute the posterior probabilities of $\theta_\text{cur}$ and $\theta_\text{pro}$ (posterior is proportional to the likelihood function times the prior)
 * Compute the acceptance ratio $p_\text{move}$
 
-  $$
-\begin{aligned}
+  $$\begin{aligned}
 p_\text{move}
 &= \min\left(1,
 \frac{\text{posterior pribability of }\theta_\text{pro}}{\text{posterior pribability of }\theta_\text{cur}}
 \right) \\
 &= \min\left(1, \frac{\text{Binomial}(z,N\mid \theta_\text{pro})\cdot\text{Beta}(\theta_\text{pro}\mid a,b)}{\text{Binomial}(z,N\mid \theta_\text{cur})\cdot\text{Beta}(\theta_\text{cur}\mid a,b)} \right)
-\end{aligned}
-$$
+\end{aligned}$$
   + If $p_\text{move}\geq 0$, then accept the sample for sure by setting $\theta_\text{cur}$ to $\theta_\text{pro}$
   + If $p_\text{move}< 0$, then accept the sample with a probability of $p_\text{move}$. We proceeds by generating a uniform random number $u\in[0, 1]$. We accept the sample if $p_\text{move}>u$, otherwise we reject the sample by staying in the current island (setting $\theta_\text{cur}$ to $\theta_\text{cur}$)
 
+$~$
 
 #### 2(a) Implementation with R
 
@@ -204,6 +206,8 @@ chain2 <- chainGenerator(start = 0.9)
 chain3 <- chainGenerator(start = 0.5)
 ```
 
+$~$
+
 #### 2(b) Overlaying three chains
 
 ```{r}
@@ -229,11 +233,13 @@ ggplot(chains.r, aes(x=theta, col=chainType, fill=chainType)) +
 
 By overlaying trace plots of three chains, we can easily see that the three chains converge to the same posterior distribution. To see it more clear, we overlay densities of three chains and the densities overlap quite a bit.
 
+$~$
+
 #### 2(c) Concatenating three chains
 
 ```{r, fig.show="hold", out.width="50%"}
 ggplot(chains.r, aes(x=index, y=theta, col=chainType)) + 
-  geom_line(alpha=0.5) + # geom_point() + 
+  geom_line(alpha=0.5) +  
   ggtitle("Trace plot of three chains concatenated") + 
   theme_minimal()
 
@@ -252,9 +258,8 @@ hdi.r <- HDIofMCMC(chains.r$theta, credMass=0.95); hdi.r
 ```{r, fig.align="center"}
 d.plot <- with(density(chains.r$theta), data.frame(x, y))
 ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
+  geom_area(aes(x=ifelse(x>hdi.r[1] & x<hdi.r[2], x, 0), y=y), fill="lightblue", alpha=0.5) + 
   geom_line(color="darkblue") +
-  geom_area(aes(x=ifelse(x>hdi.r[1] & x<hdi.r[2], x, 0), y=y), 
-            fill="lightblue", alpha=0.5) + 
   geom_vline(xintercept=0.5, color="red") + ylim(0, 5) + theme_minimal() +
   geom_text(aes(0.5, 3, label="theta=0.5"), color="red") + 
   geom_text(aes(0.7, 2, label="95% HDI"), color="darkblue") + 
@@ -262,6 +267,8 @@ ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
 ```
 
 It is a bit difficult to visually tell from the density plot whether the red vertical line $\theta=0.5$ is within the 95% HDI but numerically we see that 0.5 is within the 95% HDI.
+
+$~$
 
 #### 2(d) Implementation with JAGS
 
@@ -345,9 +352,8 @@ hdi.jags <- HDIofMCMC(chains.jags$theta, credMass=0.95); hdi.jags
 ```{r, fig.align="center"}
 d.plot <- with(density(chains.jags$theta), data.frame(x, y))
 ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
+  geom_area(aes(x=ifelse(x>hdi.jags[1] & x<hdi.jags[2], x, 0), y=y), fill="lightblue", alpha=0.5) + 
   geom_line(color="darkblue") +
-  geom_area(aes(x=ifelse(x>hdi.jags[1] & x<hdi.jags[2], x, 0), y=y), 
-            fill="lightblue", alpha=0.5) + 
   geom_vline(xintercept=0.5, color="red") + 
   geom_text(aes(0.5, 3, label="theta=0.5"), color="red") + 
   geom_text(aes(0.7, 2, label="95% HDI"), color="darkblue") + 
@@ -391,11 +397,13 @@ source("./scripts/HDIofMCMC.r") # Load the HDI function
 ## Read in the data
 df <- read.csv("./scripts/TwoGroupIQ.csv")
 
-ggplot(subset(df, subset=Group=="Smart Drug", select="Score"), aes(x=Score)) + 
+ggplot(subset(df, subset=Group=="Smart Drug", select="Score"), aes(x=Score, y=..density..)) + 
   geom_histogram(bins=30, fill="#69b3a2", color="#e9ecef", alpha=0.5) + 
   ggtitle("Histogram of the IQ Score") +
   theme_minimal()
 ```
+
+$~$
 
 #### 3 (a) Expected IQ score > 100 ?
 
@@ -433,7 +441,7 @@ results <- run.jags(
 
 ```{r}
 ## Print the summary of the results in a table
-knitr::kable(summary(results), caption="Summary of the results")
+knitr::kable(summary(results), caption="Summary results for the IS score")
 ```
 
 ```{r}
@@ -442,6 +450,9 @@ d.chains <- data.frame(
   index=rep(seq(5001, by=4, length.out=1000), times=3), 
   rbind(results$mcmc[[1]], results$mcmc[[2]], results$mcmc[[3]])
 )
+
+## Print the data frame
+rmarkdown::paged_table(d.chains)
 ```
 
 ```{r}
@@ -482,9 +493,9 @@ hdi.mu <- HDIofMCMC(d.chains$mu, credMass=0.95); hdi.mu
 ```{r, warning=FALSE, fig.align="center"}
 d.plot <- with(density(d.chains$mu), data.frame(x, y))
 ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
-  geom_line(color="darkblue") +
   geom_area(aes(x=ifelse(x>hdi.mu[1] & x<hdi.mu[2], x, 0), y=y), fill="lightblue", alpha=0.5) +
   geom_area(aes(x=ifelse(x<100, x, 0), y=y), fill="red", alpha=0.5) +
+  geom_line(color="darkblue") +
   xlim(90, 125) + 
   geom_vline(xintercept=100, color="red") +
   geom_vline(xintercept=median(d.chains$mu), color="darkblue") +
@@ -521,7 +532,19 @@ p.value <- mean(d.chains$mu<100); p.value
 * Alternatively, `mean()` function can also be used to compute the $p$-value since it returns the proportion of samples satisfying the condition
 * $P(\mu<100)=0.009$. Therefore, we can conclude that the expected value of IQ score is statistically larger than 100 at the significance level of 0.009
 
+$~$
+
 #### 3 (b) Cohen's d
+
+**Standardized mean difference:**
+
+A (population) effect size $d$ based on means usually considers the standardized mean difference between two populations:
+$$
+d=\frac{\mu_1-\mu_2}{\sigma}
+$$
+where $\mu_1$ is the mean for one population, $\mu_2$ is the mean for the other population, and $\sigma$ is the standard deviation based on either or both population.
+
+Note: this form for the effect size resembles the computation for a $t$-test statistic with the critical difference that the $t$-test statistic includes a factor of $\sqrt{n}$. This means that for a given effect size, the significance level increases with the sample size. Unlike the $t$-test statistic, the effect size aims to estimate a population parameter and is not affected by the sample size.
 
 ```{r}
 cohen.d <- with(d.chains, (mu-100)/sigma)
@@ -530,30 +553,27 @@ mean(cohen.d)
 hdi.cohend <- HDIofMCMC(cohen.d, credMass=0.95); hdi.cohend
 ```
 
-```{r}
-d.table <- data.frame(
-  EffectSize=c("Very small", "Small", "Medium", "Large", "Very large", "Huge"), 
-  d=c(0.01, 0.20, 0.50, 0.80, 1.20, 2.0), 
-  Reference=c("Sawilowsky, 2009", "Cohen, 1988", "Cohen, 1988", 
-              "Cohen, 1988", "Sawilowsky, 2009", "Sawilowsky, 2009")
-)
-knitr::kable(d.table, caption="Effect Size Metric", align="c")
-```
-
-The _cohen's d_ is around 0.3. According to the effect size metric in the table above, we can conclude the effect size is between small and medium.
-
 ```{r, fig.align="center"}
 d.plot <- with(density(cohen.d), data.frame(x, y))
 ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
-  geom_line(color="darkblue") +
   geom_area(aes(x=ifelse(x>hdi.cohend[1] & x<hdi.cohend[2], x, 0), y=y), fill="lightblue", alpha=0.5) +
-  geom_area(aes(x=ifelse(x<0, x, 0), y=y), fill="red", alpha=0.5) +
+  geom_area(aes(x=ifelse(x<=0, x, 0), y=y), fill="red", alpha=0.5) +
+  geom_line(color="darkblue") +
   ylim(0, 4) +
   geom_vline(xintercept=median(cohen.d), color="darkblue") +
   geom_vline(xintercept=0, color="red") +
   labs(title="Density of cohen's d (95% HDI)", x="cohen's d", y="density") +
   theme_minimal()
 ```
+
+The plot displays the posterior distribution of the Cohen's *d*. The 95% highest density is denoted by the blue shaded area and the $P(d\leq0)$ is denoted by the red shaded area. We can visually tell that these two areas do not overlap, which indicates that the effect size is statistically larger than 0. We can also conduct a one-tailed test and get a numerical sense of the corresponding *p*-value.
+
+$$
+\begin{aligned}
+H_0:\quad & d\leq 0 \\
+H_1:\quad & d>0
+\end{aligned}
+$$
 
 ```{r}
 ## Compute the empirical cumulative distribution function
@@ -566,31 +586,49 @@ p.value <- Fn(0); p.value
 p.value <- mean(cohen.d < 0); p.value
 ```
 
+The *p*-value is 0.009. Hence, we can reject the null hypothesis at the significance level of 0.09.
+
+```{r}
+d.table <- data.frame(
+  EffectSize=c("Very small", "Small", "Medium", "Large", "Very large", "Huge"), 
+  d=c(0.01, 0.20, 0.50, 0.80, 1.20, 2.0), 
+  Reference=c("Sawilowsky, 2009", "Cohen, 1988", "Cohen, 1988", 
+              "Cohen, 1988", "Sawilowsky, 2009", "Sawilowsky, 2009")
+)
+knitr::kable(d.table, caption="Effect Size Metric", align="c")
+```
+
+The Cohen's *d* is around 0.3. According to the effect size metric in the table above, we can conclude the effect size is between small and medium.
+
 $~$
 
 ### 4 Model Comparison
 
 ```{r, message=FALSE, warning=FALSE}
-# Load the libraries
-library(runjags)   # to communicate with JAGS
-library(rjags)     # to communicate with JAGS
+## Load the libraries
+library(runjags)
+library(rjags)
 
-library(ggplot2)   # plotting library
-library(GGally)    # plotting library
+library(ggplot2)
+library(GGally)
 ```
+
+$~$
 
 #### 4(a) Visualization of raw data
 
 ```{r, fig.align="center"}
-# Load the data
+## Load the data
 load("dataFit.RData")
 
-# Put the data into a data frame (to plot with ggplot)
+## Pairs plot
 df <- data.frame(x = x, y = y)
 ggpairs(df, aes(x=x, y=y, color="Corr", alpha=0.2)) + 
   ggtitle("Pairs plot") + theme_minimal() + 
   scale_colour_manual(values = "red")
 ```
+
+$~$
 
 #### 4(b) Fitting different models
 
@@ -743,6 +781,8 @@ knitr::kable(summary(results1), caption="Summary results for the linear model", 
 knitr::kable(summary(results2), caption="Summary results for the quadratic model", digits=4)
 ```
 
+$~$
+
 #### 4(c) Visualization of data and predictions
 
 ```{r}
@@ -792,6 +832,8 @@ ggplot() +
 ```
 
 The figure displays three fits overlaid in the scatter plot of raw data. It is clear that the quadratic model fits the data the best against the other two.
+
+$~$
 
 #### 4(d) Deviance information certerion
 
