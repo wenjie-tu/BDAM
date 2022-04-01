@@ -22,7 +22,7 @@ rm(list=ls())
 
 $~$
 
-#### 1(a) Theoretical expected payoff
+#### 1 (a) Theoretical expected payoff
 
 $$
 P(X=k)=\binom{n}{k}p^{k}(1-p)^{n-k}
@@ -39,10 +39,10 @@ dat <- data.frame(matrix(nrow=6, ncol=3))
 colnames(dat) <- c("Outcome", "Probability", "Payoff")
 
 n <- nrow(dat)
-for (k in 1:n) {
-  dat[k, 1] <- k # the number dice showing 6 on the top face
-  dat[k, 2] <- choose(n, k) * (1/6)^k * (5/6)^(n-k) # probability
-  dat[k, 3] <- 0.5*(1+k) # payoff
+for (k in 0:n) {
+  dat[k+1, 1] <- k # the number dice showing 6 on the top face
+  dat[k+1, 2] <- choose(n, k) * (1/6)^k * (5/6)^(n-k) # probability
+  dat[k+1, 3] <- ifelse(k==0, 0, 0.5*(1+k)) # payoff
 }
 ```
 
@@ -59,7 +59,7 @@ We see that the expected payoff of playing this game is 0.833, which is smaller 
 
 $~$
 
-#### 1(b) Monte Carlo simulation
+#### 1 (b) Monte Carlo simulation
 
 One can repeatedly play this game for thousands of times. A Monte Carlo simulation can be conducted to model this procedure.
 
@@ -85,11 +85,7 @@ for (i in 1:iterations) {
   d.payoff[i, 1] <- i
   
   ## Store the payoff for each iteration in the second column
-  if (n.six==0) {
-    d.payoff[i, 2] <- 0
-  } else {
-    d.payoff[i, 2] <- 0.5*(1+n.six)
-  }
+  d.payoff[i, 2] <- ifelse(n.six==0, 0, 0.5*(1+n.six))
   
   ## Compute the expected payoff in the third column
   d.payoff[i, 3] <- mean(d.payoff[1:i, 2])
@@ -103,7 +99,6 @@ library(ggplot2)
 library(gganimate)
 library(gifski)
 ```
-
 
 ```{r}
 ggplot(d.payoff, aes(x=Iterations, y=Expectation)) + 
@@ -158,7 +153,7 @@ p_\text{move}
 
 $~$
 
-#### 2(a) Implementation with R
+#### 2 (a) Implementation with R
 
 ```{r}
 ## Set seed for reproducible results
@@ -208,7 +203,7 @@ chain3 <- chainGenerator(start = 0.5)
 
 $~$
 
-#### 2(b) Overlaying three chains
+#### 2 (b) Overlaying three chains
 
 ```{r}
 chains.r <- data.frame(
@@ -231,11 +226,11 @@ ggplot(chains.r, aes(x=theta, col=chainType, fill=chainType)) +
   theme_minimal()
 ```
 
-By overlaying trace plots of three chains, we can easily see that the three chains converge to the same posterior distribution. To see it more clear, we overlay densities of three chains and the densities overlap quite a bit.
+By overlaying trace plots and density plots of three chains, we can see that the three chains converge to the same posterior distribution. To see it more clear, we overlay densities of three chains and the densities overlap quite a bit.
 
 $~$
 
-#### 2(c) Concatenating three chains
+#### 2 (c) Concatenating three chains
 
 ```{r, fig.show="hold", out.width="50%"}
 ggplot(chains.r, aes(x=index, y=theta, col=chainType)) + 
@@ -266,11 +261,11 @@ ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
   labs(title="Density of theta with 95% HDI (Metropolis)", x="theta", y="density")
 ```
 
-It is a bit difficult to visually tell from the density plot whether the red vertical line $\theta=0.5$ is within the 95% HDI but numerically we see that 0.5 is within the 95% HDI.
+It is a bit difficult to visually tell from the density plot whether the red vertical line $\theta=0.5$ lies in the 95% HDI but numerically we see that 0.5 lies in the 95% HDI.
 
 $~$
 
-#### 2(d) Implementation with JAGS
+#### 2 (d) Implementation with JAGS
 
 ```{r}
 library(rjags)
@@ -332,6 +327,8 @@ results <- run.jags(
 knitr::kable(summary(results), caption="Summary results of the Metropolis algorithm")
 ```
 
+We see from the summary results that 0.5 lies in the equi-tailed 95% interval $(0.493841, 0.8597397)$ and that psrf (convergence diagnostic) is very close to 1 (which indicates the current distribution converges to the target distribution).
+
 ```{r, fig.align="center"}
 chains.jags <- data.frame(
   chainType=rep(c("chain1", "chain2", "chain3"), each=2500), 
@@ -362,7 +359,7 @@ ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
   theme_minimal()
 ```
 
-We are able to visually detect that the red vertical line $\theta=0.5$ is within the 95% HDI (blue shaded density).
+We are able to visually detect that the red vertical line $\theta=0.5$ lies in the 95% HDI (blue shaded density).
 
 ```{r, fig.align="center"}
 d.plot <- data.frame(
@@ -506,31 +503,24 @@ ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
   theme_minimal()
 ```
 
-* The shaded light blue area corresponds to the 95% highest density
-* The shaded red area corresponds to the density probability of observing an IQ test with a value less than 100
+* The light blue shaded area corresponds to the 95% highest density
+* The red shaded area corresponds to the density probability of observing an IQ test with a value less than 100
 * Visually it can be seen that these two shaded areas do not overlap. In other words, the 95% HDI does not cover 100. We thus conclude that the expected value of the IQ test is greater than 100
-
-$$
-\begin{aligned}
-H_0: \quad & \mu\leq 100 \\
-H_1: \quad & \mu>100
-\end{aligned}
-$$
 
 ```{r}
 ## Compute the empirical cumulative distribution function
 Fn <- ecdf(d.chains$mu)
 
-## Calculate P[mu < 100] from empirical CDF
-p.value <- Fn(100); p.value
+## Calculate P[mu > 100] from empirical CDF
+prob <- 1 - Fn(100); prob
 
 ## Alternatively
-p.value <- mean(d.chains$mu<100); p.value
+prob <- mean(d.chains$mu>100); prob
 ```
 
-* `ecdf()` function is used to compute the empirical cumulative distribution function and 100 is passed to the empirical CDF to calculate the $p$-value (i.e. $P(\mu<100)$)
-* Alternatively, `mean()` function can also be used to compute the $p$-value since it returns the proportion of samples satisfying the condition
-* $P(\mu<100)=0.009$. Therefore, we can conclude that the expected value of IQ score is statistically larger than 100 at the significance level of 0.009
+* `ecdf()` function is used to compute the empirical cumulative distribution function and 100 is passed to the empirical CDF to calculate the posterior probability of $\mu>100$
+* Alternatively, `mean()` function can serve the same purpose since it returns the proportion of samples satisfying the condition
+* $P(\mu>100)=0.991$. Therefore, we can conclude that the posterior probability of IQ score greater than 100 is 99.1%
 
 $~$
 
@@ -547,9 +537,10 @@ where $\mu_1$ is the mean for one population, $\mu_2$ is the mean for the other 
 Note: this form for the effect size resembles the computation for a $t$-test statistic with the critical difference that the $t$-test statistic includes a factor of $\sqrt{n}$. This means that for a given effect size, the significance level increases with the sample size. Unlike the $t$-test statistic, the effect size aims to estimate a population parameter and is not affected by the sample size.
 
 ```{r}
+## Construct the effect size (Cohen's d)
 cohen.d <- with(d.chains, (mu-100)/sigma)
-mean(cohen.d)
 
+## Compute the 95% HDI
 hdi.cohend <- HDIofMCMC(cohen.d, credMass=0.95); hdi.cohend
 ```
 
@@ -566,27 +557,20 @@ ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
   theme_minimal()
 ```
 
-The plot displays the posterior distribution of the Cohen's *d*. The 95% highest density is denoted by the blue shaded area and the $P(d\leq0)$ is denoted by the red shaded area. We can visually tell that these two areas do not overlap, which indicates that the effect size is statistically larger than 0. We can also conduct a one-tailed test and get a numerical sense of the corresponding *p*-value.
-
-$$
-\begin{aligned}
-H_0:\quad & d\leq 0 \\
-H_1:\quad & d>0
-\end{aligned}
-$$
+The figure above displays the posterior distribution of the Cohen's *d*. The 95% highest density is denoted by the blue shaded area and the posterior probability of $d\leq0$ is denoted by the red shaded area. We can visually tell that these two areas do not overlap, which indicates that the effect size is larger than 0. We can also compute the exact posterior probability of $d\leq0$ and get a numerical sense of how much evidence we have for the Cohen's *d* larger than 0:
 
 ```{r}
 ## Compute the empirical cumulative distribution function
 Fn <- ecdf(cohen.d)
 
-## Calculate P[d<0] from empirical CDF
-p.value <- Fn(0); p.value
+## Calculate P[d>0] from empirical CDF
+prob <- 1 - Fn(0); prob
 
 ## Alternatively
-p.value <- mean(cohen.d < 0); p.value
+prob <- mean(cohen.d > 0); prob
 ```
 
-The *p*-value is 0.009. Hence, we can reject the null hypothesis at the significance level of 0.09.
+Unsurprisingly, we obtain the same posterior probability for $d>0$ as we have for $\mu>100$ since these two in essence are the same. Therefore, we can conclude that the posterior probability of the effect size larger than 0 is 99.1%.
 
 ```{r}
 d.table <- data.frame(
@@ -597,6 +581,12 @@ d.table <- data.frame(
 )
 knitr::kable(d.table, caption="Effect Size Metric", align="c")
 ```
+
+```{r}
+## Obtain the expected effect size
+mean(cohen.d)
+```
+
 
 The Cohen's *d* is around 0.3. According to the effect size metric in the table above, we can conclude the effect size is between small and medium.
 
@@ -615,7 +605,7 @@ library(GGally)
 
 $~$
 
-#### 4(a) Visualization of raw data
+#### 4 (a) Visualization of raw data
 
 ```{r, fig.align="center"}
 ## Load the data
@@ -630,7 +620,7 @@ ggpairs(df, aes(x=x, y=y, color="Corr", alpha=0.2)) +
 
 $~$
 
-#### 4(b) Fitting different models
+#### 4 (b) Fitting different models
 
 Null model:
 $$
@@ -783,7 +773,7 @@ knitr::kable(summary(results2), caption="Summary results for the quadratic model
 
 $~$
 
-#### 4(c) Visualization of data and predictions
+#### 4 (c) Visualization of data and models
 
 ```{r}
 ## Extract parameters from the summary results
@@ -835,7 +825,7 @@ The figure displays three fits overlaid in the scatter plot of raw data. It is c
 
 $~$
 
-#### 4(d) Deviance information certerion
+#### 4 (d) Deviance information certerion
 
 $$
 \texttt{DIC = mean(deviance) + (SD(deviance)^2)/2}
@@ -865,4 +855,4 @@ rownames(d.dic) <- "DIC"
 knitr::kable(d.dic, align="c", caption="DICs for three models")
 ```
 
-The lower DIC indicates a better fit to the data. The table shows that the quadratic model yields the smallest DIC, thus the best fit out of three models, which is also consistent with what we see visually from the plot.
+The lower DIC indicates a better fit to the data. The table shows that the quadratic model yields the smallest DIC, thus the best fit out of three models, which is also consistent with what we see from the plot.
