@@ -2804,16 +2804,18 @@ with a face of 6</li>
 lands with a face of 6</li>
 </ul>
 <pre class="r"><code>## Initialize a 6x2 data frame
-dat &lt;- data.frame(matrix(nrow=6, ncol=3))
+dat &lt;- data.frame(matrix(nrow=7, ncol=3))
 colnames(dat) &lt;- c(&quot;Outcome&quot;, &quot;Probability&quot;, &quot;Payoff&quot;)
 
-n &lt;- nrow(dat)
+n &lt;- nrow(dat)-1
 for (k in 0:n) {
   dat[k+1, 1] &lt;- k # the number dice showing 6 on the top face
   dat[k+1, 2] &lt;- choose(n, k) * (1/6)^k * (5/6)^(n-k) # probability
   dat[k+1, 3] &lt;- ifelse(k==0, 0, 0.5*(1+k)) # payoff
-}</code></pre>
-<pre class="r"><code>knitr::kable(dat, align=&quot;c&quot;, caption=&quot;Six dice game&quot;)</code></pre>
+}
+
+## Print results in a table
+knitr::kable(dat, align=&quot;c&quot;, caption=&quot;Six dice game&quot;)</code></pre>
 <table>
 <caption>Six dice game</caption>
 <thead>
@@ -2871,8 +2873,11 @@ Therefore, it is not a good idea to play this game.</p>
 </div>
 <div id="b-monte-carlo-simulation" class="section level4">
 <h4>1 (b) Monte Carlo simulation</h4>
-<p>One can repeatedly play this game for thousands of times. A Monte
-Carlo simulation can be conducted to model this procedure.</p>
+<p>This game can be repeatedly played for thousands of times and the
+empirical expected payoff can be obtained. The simulation can simply be
+done in <code>R</code>. One can compare the empirical expected payoff
+with the initial cost of playing this game to see if this game is fair
+or not.</p>
 <pre class="r"><code>## Set seed for reproducible results
 set.seed(4321)
 
@@ -3245,6 +3250,14 @@ source(&quot;./scripts/HDIofMCMC.r&quot;) # Load the HDI function</code></pre>
 <pre class="r"><code>## Read in the data
 df &lt;- read.csv(&quot;./scripts/TwoGroupIQ.csv&quot;)
 
+## Look at the data
+rmarkdown::paged_table(df)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["Score"],"name":[1],"type":["int"],"align":["right"]},{"label":["Group"],"name":[2],"type":["chr"],"align":["left"]}],"data":[{"1":"102","2":"Smart Drug"},{"1":"107","2":"Smart Drug"},{"1":"92","2":"Smart Drug"},{"1":"101","2":"Smart Drug"},{"1":"110","2":"Smart Drug"},{"1":"68","2":"Smart Drug"},{"1":"119","2":"Smart Drug"},{"1":"106","2":"Smart Drug"},{"1":"99","2":"Smart Drug"},{"1":"103","2":"Smart Drug"},{"1":"90","2":"Smart Drug"},{"1":"93","2":"Smart Drug"},{"1":"79","2":"Smart Drug"},{"1":"89","2":"Smart Drug"},{"1":"137","2":"Smart Drug"},{"1":"119","2":"Smart Drug"},{"1":"126","2":"Smart Drug"},{"1":"110","2":"Smart Drug"},{"1":"71","2":"Smart Drug"},{"1":"114","2":"Smart Drug"},{"1":"100","2":"Smart Drug"},{"1":"95","2":"Smart Drug"},{"1":"91","2":"Smart Drug"},{"1":"99","2":"Smart Drug"},{"1":"97","2":"Smart Drug"},{"1":"106","2":"Smart Drug"},{"1":"106","2":"Smart Drug"},{"1":"129","2":"Smart Drug"},{"1":"115","2":"Smart Drug"},{"1":"124","2":"Smart Drug"},{"1":"137","2":"Smart Drug"},{"1":"73","2":"Smart Drug"},{"1":"69","2":"Smart Drug"},{"1":"95","2":"Smart Drug"},{"1":"102","2":"Smart Drug"},{"1":"116","2":"Smart Drug"},{"1":"111","2":"Smart Drug"},{"1":"134","2":"Smart Drug"},{"1":"102","2":"Smart Drug"},{"1":"110","2":"Smart Drug"},{"1":"139","2":"Smart Drug"},{"1":"112","2":"Smart Drug"},{"1":"122","2":"Smart Drug"},{"1":"84","2":"Smart Drug"},{"1":"129","2":"Smart Drug"},{"1":"112","2":"Smart Drug"},{"1":"127","2":"Smart Drug"},{"1":"106","2":"Smart Drug"},{"1":"113","2":"Smart Drug"},{"1":"109","2":"Smart Drug"},{"1":"208","2":"Smart Drug"},{"1":"114","2":"Smart Drug"},{"1":"107","2":"Smart Drug"},{"1":"50","2":"Smart Drug"},{"1":"169","2":"Smart Drug"},{"1":"133","2":"Smart Drug"},{"1":"50","2":"Smart Drug"},{"1":"97","2":"Smart Drug"},{"1":"139","2":"Smart Drug"},{"1":"72","2":"Smart Drug"},{"1":"100","2":"Smart Drug"},{"1":"144","2":"Smart Drug"},{"1":"112","2":"Smart Drug"},{"1":"109","2":"Placebo"},{"1":"98","2":"Placebo"},{"1":"106","2":"Placebo"},{"1":"101","2":"Placebo"},{"1":"100","2":"Placebo"},{"1":"111","2":"Placebo"},{"1":"117","2":"Placebo"},{"1":"104","2":"Placebo"},{"1":"106","2":"Placebo"},{"1":"89","2":"Placebo"},{"1":"84","2":"Placebo"},{"1":"88","2":"Placebo"},{"1":"94","2":"Placebo"},{"1":"78","2":"Placebo"},{"1":"108","2":"Placebo"},{"1":"102","2":"Placebo"},{"1":"95","2":"Placebo"},{"1":"99","2":"Placebo"},{"1":"90","2":"Placebo"},{"1":"116","2":"Placebo"},{"1":"97","2":"Placebo"},{"1":"107","2":"Placebo"},{"1":"102","2":"Placebo"},{"1":"91","2":"Placebo"},{"1":"94","2":"Placebo"},{"1":"95","2":"Placebo"},{"1":"86","2":"Placebo"},{"1":"108","2":"Placebo"},{"1":"115","2":"Placebo"},{"1":"108","2":"Placebo"},{"1":"88","2":"Placebo"},{"1":"102","2":"Placebo"},{"1":"102","2":"Placebo"},{"1":"120","2":"Placebo"},{"1":"112","2":"Placebo"},{"1":"100","2":"Placebo"},{"1":"105","2":"Placebo"},{"1":"105","2":"Placebo"},{"1":"88","2":"Placebo"},{"1":"82","2":"Placebo"},{"1":"111","2":"Placebo"},{"1":"96","2":"Placebo"},{"1":"92","2":"Placebo"},{"1":"109","2":"Placebo"},{"1":"91","2":"Placebo"},{"1":"92","2":"Placebo"},{"1":"123","2":"Placebo"},{"1":"61","2":"Placebo"},{"1":"59","2":"Placebo"},{"1":"105","2":"Placebo"},{"1":"184","2":"Placebo"},{"1":"82","2":"Placebo"},{"1":"138","2":"Placebo"},{"1":"99","2":"Placebo"},{"1":"93","2":"Placebo"},{"1":"93","2":"Placebo"},{"1":"72","2":"Placebo"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<pre class="r"><code>## Plot histogram of IQ score in &quot;Smart Drug&quot; group
 ggplot(subset(df, subset=Group==&quot;Smart Drug&quot;, select=&quot;Score&quot;), aes(x=Score, y=..density..)) + 
   geom_histogram(bins=30, fill=&quot;#69b3a2&quot;, color=&quot;#e9ecef&quot;, alpha=0.5) + 
   ggtitle(&quot;Histogram of the IQ Score&quot;) +
@@ -3253,6 +3266,17 @@ ggplot(subset(df, subset=Group==&quot;Smart Drug&quot;, select=&quot;Score&quot;
 <p><span class="math inline">\(~\)</span></p>
 <div id="a-expected-iq-score-100" class="section level4">
 <h4>3 (a) Expected IQ score &gt; 100 ?</h4>
+<pre class="r"><code>## Look at the model from the lecture 4
+writeLines(readLines(&quot;models/oneSampleNorm.txt&quot;))</code></pre>
+<pre><code>## model {
+##  mu ~ dnorm(0, 0.0001) # prior for the mean
+##  sigma ~ dunif(0.0001, 100) # prior for the standard deviation 
+##  
+##  for (i in 1:Ntotal) {
+##      y[i] ~ dnorm(mu, 1/sigma^2) # The normal distribution takes
+##  }               # mean and precision --&gt; precision = 1/sigma^2
+## 
+## }</code></pre>
 <pre class="r"><code>## For purposes of this one-group example, use data from Smart Drug group:
 IQscore &lt;- df$Score[df$Group==&quot;Smart Drug&quot;]
 
