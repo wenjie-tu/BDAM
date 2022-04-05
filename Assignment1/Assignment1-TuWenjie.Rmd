@@ -40,7 +40,7 @@ colnames(dat) <- c("Outcome", "Probability", "Payoff")
 
 n <- nrow(dat)-1
 for (k in 0:n) {
-  dat[k+1, 1] <- k # the number dice showing 6 on the top face
+  dat[k+1, 1] <- k # the number dice showing 6 on the top
   dat[k+1, 2] <- choose(n, k) * (1/6)^k * (5/6)^(n-k) # probability
   dat[k+1, 3] <- ifelse(k==0, 0, 0.5*(1+k)) # payoff
 }
@@ -67,8 +67,8 @@ This game can be repeatedly played for thousands of times and the empirical expe
 ## Set seed for reproducible results
 set.seed(4321)
 
-iterations <- 5000 # the number of iterations
-cost <- 1          # the initial cost of playing the game one time
+iterations <- 10000 # the number of iterations
+cost <- 1           # the initial cost of playing the game one time
 
 ## Generate a data frame for plotting
 d.payoff <- data.frame(matrix(nrow=iterations, ncol=3)) 
@@ -273,17 +273,16 @@ library(runjags)
 ```
 
 ```{r}
-## Null model
-if (file.exists("./models/metropolis_model.txt")) {
-  print("The text file for Metropolis model already existed!")
-} else {
+if (!file.exists("./models/metropolis_model.txt")) {
   cat("model{
       theta ~ dbeta(1, 1)    # (uniform) prior
       
       for (i in 1:Ntotal) {
         y[i] ~ dbern(theta)  # likelihood 
       }
-  }", file="./models/metropolis_model.txt")
+  }", file="./models/metropolis_model.txt") 
+} else {
+  print("The text file for Metropolis model already existed!")
 }
 ```
 
@@ -520,18 +519,18 @@ ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
 * Visually it can be seen that these two shaded areas do not overlap. In other words, the 95% HDI does not cover 100. We thus conclude that the expected value of the IQ test is greater than 100
 
 ```{r}
+## Compute the P[mu > 100]
+prob <- mean(d.chains$mu>100); prob
+
 ## Compute the empirical cumulative distribution function
 Fn <- ecdf(d.chains$mu)
 
 ## Calculate P[mu > 100] from empirical CDF
 prob <- 1 - Fn(100); prob
-
-## Alternatively
-prob <- mean(d.chains$mu>100); prob
 ```
 
-* `ecdf()` function is used to compute the empirical cumulative distribution function and 100 is passed to the empirical CDF to calculate the posterior probability of $\mu>100$
-* Alternatively, `mean()` function can serve the same purpose since it returns the proportion of samples satisfying the condition
+* `mean()` function is used to compute the posterior probability of $\mu>100$ since it returns the proportion of samples satisfying the condition
+* Alternatively, `ecdf()` function can serve the same purpose as it estimates the empirical cumulative distribution function.
 * $P(\mu>100)=0.991$. Therefore, we can conclude that the posterior probability of IQ score greater than 100 is 99.1%
 
 $~$
@@ -572,17 +571,17 @@ ggplot(data=d.plot, mapping=aes(x=x, y=y)) +
 The figure above displays the posterior distribution of the Cohen's *d*. The 95% highest density is denoted by the blue shaded area and the posterior probability of $d\leq0$ is denoted by the red shaded area. We can visually tell that these two areas do not overlap, which indicates that the effect size is larger than 0. We can also compute the exact posterior probability of $d\leq0$ and get a numerical sense of how much evidence we have for the Cohen's *d* larger than 0:
 
 ```{r}
+## Compute P[d > 0]
+prob <- mean(cohen.d > 0); prob
+
 ## Compute the empirical cumulative distribution function
 Fn <- ecdf(cohen.d)
 
 ## Calculate P[d>0] from empirical CDF
 prob <- 1 - Fn(0); prob
-
-## Alternatively
-prob <- mean(cohen.d > 0); prob
 ```
 
-Unsurprisingly, we obtain the same posterior probability for $d>0$ as we have for $\mu>100$ since these two in essence are the same. Therefore, we can conclude that the posterior probability of the effect size larger than 0 is 99.1%.
+Unsurprisingly, we obtain the same posterior probability for $d>0$ as we have for $\mu>100$ since these two in essence are the same. Therefore, we can conclude that the posterior probability of the effect size larger than 0 is 99.1% (i.e. $P(d>0)=99.1\%$).
 
 ```{r}
 d.table <- data.frame(
@@ -651,9 +650,7 @@ $$
 
 ```{r}
 ## Null model
-if (file.exists("./models/null_model.txt")) {
-  print("The null model text file already existed!")
-} else {
+if (!file.exists("./models/null_model.txt")) {
   cat("model{
       a ~ dnorm(0, 0.00001)        # prior for the intercept
       sigma ~ dunif(0.00001, 100)  # prior for the sd of y
@@ -662,12 +659,12 @@ if (file.exists("./models/null_model.txt")) {
         y[i] ~ dnorm(a, 1/(sigma^2))
       }
   }", file="./models/null_model.txt")
+} else {
+  print("The null model text file already existed!")
 }
 
 ## Linear model
-if (file.exists("./models/linear_model.txt")) {
-  print("The linear model text file already existed!")
-} else {
+if (!file.exists("./models/linear_model.txt")) {
   cat("model{
       a ~ dnorm(0, 0.00001)        # prior for the intercept
       b ~ dnorm(0, 0.00001)        # prior for the slope
@@ -678,12 +675,12 @@ if (file.exists("./models/linear_model.txt")) {
         y[i] ~ dnorm(mu[i], 1/(sigma^2))
       }
   }", file="./models/linear_model.txt")
+} else {
+  print("The linear model text file already existed!")
 }
 
 ## Quadratic model
-if (file.exists("./models/quadratic_model.txt")) {
-  print("The quadratic model text file already existed!")
-} else {
+if (!file.exists("./models/quadratic_model.txt")) {
   cat("model{
       a ~ dnorm(0, 0.00001)        # prior for the intercept
       b ~ dnorm(0, 0.00001)        # prior for the slope
@@ -695,6 +692,8 @@ if (file.exists("./models/quadratic_model.txt")) {
         y[i] ~ dnorm(mu[i], 1/(sigma^2))
       }
   }", file="./models/quadratic_model.txt")
+} else {
+  print("The quadratic model text file already existed!")
 }
 ```
 
@@ -721,9 +720,7 @@ n.thin    <- 5     # the thinning interval
 
 ```{r, warning=FALSE}
 ## Null model: y = a
-if (exists("results0")) {
-  print("Results for the null model already existed!")
-} else {
+if (!exists("results0")) {
   results0 <- run.jags(
     model = "models/null_model.txt", 
     monitor = monitor0, 
@@ -734,14 +731,14 @@ if (exists("results0")) {
     sample = n.samples, 
     thin = n.thin
   )
+} else {
+  print("Results for the null model already existed!")
 }
 ```
 
 ```{r}
 ## Linear model: y = a + b*x
-if (exists("results1")) {
-  print("Results for the linear model already existed")
-} else {
+if (!exists("results1")) {
   results1 <- run.jags(
     model = "models/linear_model.txt", 
     monitor = monitor1, 
@@ -752,13 +749,13 @@ if (exists("results1")) {
     sample = n.samples, 
     thin = n.thin
   )
+} else {
+  print("Results for the linear model already existed")
 }
 ```
 
 ```{r}
-if (exists("results2")) {
-  print("Results for the quadratic model already existed")
-} else {
+if (!exists("results2")) {
   results2 <- run.jags(
     model = "models/quadratic_model.txt", 
     monitor = monitor2, 
@@ -769,6 +766,8 @@ if (exists("results2")) {
     sample = n.samples, 
     thin = n.thin
   )
+} else {
+  print("Results for the quadratic model already existed")
 }
 ```
 
