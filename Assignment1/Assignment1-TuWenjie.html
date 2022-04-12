@@ -3191,10 +3191,11 @@ knitr::kable(summary(results), caption=&quot;Summary results of the Metropolis a
 </tr>
 </tbody>
 </table>
-<p>We see from the summary results that 0.5 lies in the equi-tailed 95%
-interval <span class="math inline">\((0.493841, 0.8597397)\)</span> and
-that psrf (convergence diagnostic) is very close to 1 (which indicates
-the current distribution converges to the target distribution).</p>
+<p>We see from the summary results that 0.5 lies in the 95% highest
+density interval <span class="math inline">\((0.493841,
+0.8597397)\)</span> and that <strong>psrf</strong> (convergence
+diagnostic) is very close to 1 (which indicates the current distribution
+converges to the target distribution).</p>
 <pre class="r"><code>chains.jags &lt;- data.frame(
   chainType=rep(c(&quot;chain1&quot;, &quot;chain2&quot;, &quot;chain3&quot;), each=2500), 
   index=rep(seq(2501, length.out=2500), times=3), 

@@ -326,7 +326,7 @@ results <- run.jags(
 knitr::kable(summary(results), caption="Summary results of the Metropolis algorithm")
 ```
 
-We see from the summary results that 0.5 lies in the equi-tailed 95% interval $(0.493841, 0.8597397)$ and that psrf (convergence diagnostic) is very close to 1 (which indicates the current distribution converges to the target distribution).
+We see from the summary results that 0.5 lies in the 95% highest density interval $(0.493841, 0.8597397)$ and that **psrf** (convergence diagnostic) is very close to 1 (which indicates the current distribution converges to the target distribution).
 
 ```{r, fig.align="center"}
 chains.jags <- data.frame(
