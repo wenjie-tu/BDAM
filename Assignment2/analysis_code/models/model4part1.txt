@@ -1,0 +1,18 @@
+model {
+      for (k in 1:Nx) {
+        b.mu[k] ~ dnorm(0, 0.0000001) # prior for coefficients (including intercept)
+        b.sig[k] ~ dunif(0.1, 100)    # prior for coefficients error
+      }
+      
+      for (j in 1:Nsubj) {
+       for (k in 1:Nx) {
+        b.s[j, k] ~ dnorm(b.mu[k], 1/b.sig[k]^2) # precision = 1/b.sig[k]^2
+       }
+      }
+      
+      for (i in 1:Ntotal) {
+        p[i] = ilogit( sum(b.s[subIdx[i], 1:Nx] * x[i, 1:Nx]) )
+        y[i] ~ dbern(p[i])
+        ly[i] = log(p[i])
+      }
+    }

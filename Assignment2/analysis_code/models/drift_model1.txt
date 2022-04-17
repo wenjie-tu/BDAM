@@ -1,0 +1,20 @@
+
+    model {
+      for (j in 1:Nx) {
+        b.mu[j] ~ dnorm(0, 1e-7)    # prior coefficients (including intercept)
+        b.sig[j] ~ dunif(1e-4, 100)  # prior coefficients error
+      }
+      
+      for (s in 1:Nsubj) {
+        for (j in 1:Nx) {
+          b.s[s, j] ~ dnorm(b.mu[j], 1/b.sig[j]^2)
+        }
+      }
+      
+      for (i in 1:Ntotal) {
+        p[i] <- ilogit(sum(b.s[subIdx[i], 1:Nx] * x[i, 1:Nx]))
+        y[i] ~ dbern(p[i])
+        ly[i] <- log(p[i])
+      }
+    }
+    

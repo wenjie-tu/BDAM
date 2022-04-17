@@ -1,0 +1,23 @@
+model {
+  b_0.mu ~ dnorm(0, 1e-7)
+  b_0.sig ~ dunif(1e-4, 100)
+  
+  for (k in 1:Nx) {
+    b_k.mu ~ dnorm(0, 1e-7)
+    b_k.sig ~ dunif(1e-4, 100)
+  }
+  
+  for (s in 1:Nsubj) {
+    b_0[s] ~ dnorm(b_0.mu, 1/b_0.sig^2)
+    
+    for (k in 1:Nx) {
+      b_k[s, k] ~ dnorm(b_k.mu[k], 1/b_k.sig[k]^2)
+    }
+  }
+  
+  for (i in 1:Ntotal) {
+    p[i] = ilogit(sum(b.s[subIdx[i], 1:Nx] * x[i, 1:Nx]))
+    y[i] ~ dbern(p[i])
+    ly[i] = log(p[i])
+  }
+}

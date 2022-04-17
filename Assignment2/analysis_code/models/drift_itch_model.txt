@@ -1,0 +1,28 @@
+model {
+
+	beta0.mu ~ dnorm(0, 0.0000001) # prior intercept
+	beta0.sig ~ dunif(0.0001, 100) # prior intercept error
+
+	for ( j in 1:Nx ) {
+      xbeta.mu[j] ~ dnorm(0, 0.0000001) # prior slope
+			xbeta.sig[j] ~ dunif(0.0001, 100) # prior slope error
+    }
+    
+	for (s in idxSubj) {
+
+		beta0.s[s] ~ dnorm(beta0.mu, beta0.sig)
+
+		for ( j in 1:Nx ) {
+	      xbeta.s[s,j] ~ dnorm(xbeta.mu[j], xbeta.sig[j])
+	    }
+	}
+	
+	for (i in 1:Ntotal) {
+	  
+	  pr[i] <- ilogit(beta0.s[subIdx[i]] + sum( xbeta.s[subIdx[i], 1:Nx] * x[i, 1:Nx] ))
+	  y[i] ~ dbern(pr[i])
+	  y_l[i] <- log(pr[i])
+	}
+    
+}
+
