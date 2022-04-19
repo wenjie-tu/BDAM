@@ -17,7 +17,19 @@ rm(list=ls())
 setwd("F:/UZH/22Spring/BDAM/BDAM/Assignment2/analysis_code")
 ```
 
+$~$
+
 ### Part 1
+
+The goal of this task is to compare the *intertemporal choice heuristic* (ITCH) model with the *difference-ratio-interest-finance-time* (DRIFT) model across five closely related conditions:
+
+* **Condition 1:** Absolute money value, delay framing (e.g., \$5 today vs. \$5 plus an additional \$5 in 4 weeks)
+* **Condition 2:** Relative money value, delay framing (e.g., \$5 today vs. \$5 plus an additional 100\% in 4 weeks)
+* **Condition 3:** Standard MEL format (e.g., \$5 today vs. \$10 in 4 weeks)
+* **Condition 4:** Absolute money value, speedup framing (e.g., \$10 in 4 weeks vs. \$10 minus \$5 today)
+* **Condition 5:** Relative money value, speedup framing (e.g., \$10 in 4 weeks vs. \$10 minus 50\% today)
+
+#### Bayesian hierarchical logistic regression
 
 DRIFT (Difference Ratio Interest Finance Time) model:
 $$
@@ -29,7 +41,7 @@ $$
 \texttt{LaterOptionChosen ~ Intercept + G + R + D + T}
 $$
 
-Since DRIFT model and ITCH model take the same form (four regressors with intercept), we can write only one text file for these two models:
+Since DRIFT model and ITCH model take the same form (four regressors with intercept), we can write one single text file for these two models:
 
 ```{r}
 if (!file.exists("./models/model4part1.txt")) {
@@ -55,14 +67,6 @@ if (!file.exists("./models/model4part1.txt")) {
   print("The text file already existed!")
 }
 ```
-
-Five conditions:
-
-* **Condition 1:** Absolute money value, delay framing (e.g., \$5 today vs. \$5 plus an additional \$5 in 4 weeks)
-* **Condition 2:** Relative money value, delay framing (e.g., \$5 today vs. \$5 plus an additional 100\% in 4 weeks)
-* **Condition 3:** Standard MEL format (e.g., \$5 today vs. \$10 in 4 weeks)
-* **Condition 4:** Absolute money value, speedup framing (e.g., \$10 in 4 weeks vs. \$10 minus \$5 today)
-* **Condition 5:** Relative money value, speedup framing (e.g., \$10 in 4 weeks vs. \$10 minus 50\% today)
 
 ```{r, warning=FALSE, message=FALSE, results="hold"}
 ## Load required packages
@@ -241,7 +245,7 @@ $~$
 
 ### Part 2
 
-Assumption: the variance is homogeneous across different groups.
+Assumption: the variance is homogeneous across different conditions
 
 Conditions:
 
@@ -251,10 +255,18 @@ Conditions:
 * Condition 4: Absolute Losses
 * Condition 5: Relative Losses
 
-Method: Bayesian one-way ANOVA
+Graphical representation: 
 ```{r, echo=FALSE, fig.cap="Graphical representation of Bayesian hierarchical logistic regression"}
 knitr::include_graphics("./images/model_graph.png")
 ```
+
+#### Bayesian one-way ANOVA
+
+```{r}
+## Look at the JAGS model (from the lecture script OneFactorAnovaHomVar.R)
+writeLines(readLines("./models/1way_ANOVA_homogenous_var.txt"))
+```
+
 
 ```{r}
 ## NOTE: code in this chunk is modified from the lecture script OneFactorAnovaHomVar.R
@@ -284,16 +296,16 @@ NxLvl <- length(unique(x))
 yMean <- mean(y)
 ySD <- sd(y)
 # For hyper-prior on deflections:
-agammaShRa <- gammaShRaFromModeSD(mode=sd(y)/2 , sd=2*sd(y))
+agammaShRa <- gammaShRaFromModeSD(mode=sd(y)/2, sd=2*sd(y))
 # Specify the data in a list for sending to JAGS:
 dataList <- list(
-  y = y ,
-  x = x ,
-  Ntotal = Ntotal ,
-  NxLvl = NxLvl ,
+  y = y, 
+  x = x, 
+  Ntotal = Ntotal, 
+  NxLvl = NxLvl, 
   # data properties for scaling the prior:
-  yMean = yMean ,
-  ySD = ySD ,
+  yMean = yMean, 
+  ySD = ySD,  
   agammaShRa = agammaShRa 
 )
 
@@ -319,22 +331,22 @@ monitor <- c("b0", "b", "m", "aSigma", "ySigma")
 adaptSteps <- 500 
 burnInSteps <- 5000
 nChains <- 3
-results <- run.jags(model="./models/1way_ANOVA_homogenous_var.txt" , 
-                    monitor=monitor , 
-                    data=dataList ,  
-                    inits=c(inits1, inits2, inits3), 
-                    n.chains=nChains ,
-                    adapt=adaptSteps ,
-                    burnin=burnInSteps , 
-                    sample=5000 ,
-                    thin=1 ,
-                    summarise=FALSE ,
-                    plots=FALSE )
+results <- run.jags(model = "./models/1way_ANOVA_homogenous_var.txt", 
+                    monitor = monitor, 
+                    data = dataList,  
+                    inits = c(inits1, inits2, inits3), 
+                    n.chains = nChains,
+                    adapt = adaptSteps,
+                    burnin = burnInSteps, 
+                    sample = 5000,
+                    thin = 1,
+                    summarise = FALSE,
+                    plots = FALSE)
 ```
 
 ```{r}
 ## Print the summary results in a table 
-knitr::kable(summary(results), digits=6, align="c")
+knitr::kable(summary(results), digits=6, align="c", caption="Summary results for Bayesian one-way ANOVA")
 ```
 
 ```{r}
@@ -342,11 +354,11 @@ knitr::kable(summary(results), digits=6, align="c")
 rmarkdown::paged_table(data.frame(results$mcmc[[1]]))
 ```
 
-```{r}
+```{r, results="asis"}
 chains <- results$mcmc
 b.samples <- as.data.frame(rbind(chains[[1]][, 2:6], chains[[2]][, 2:6], chains[[3]][, 2:6]))
 names(b.samples) <- c("Condition1", "Condition2", "Condition3", "Condition4", "Condition5")
-summary(b.samples)
+knitr::kable(summary(b.samples), caption="Summary statistics for five conditions")
 ```
 
 #### Moustache plot
