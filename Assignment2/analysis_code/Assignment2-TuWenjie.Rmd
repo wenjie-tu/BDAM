@@ -29,7 +29,7 @@ $$
 \texttt{LaterOptionChosen ~ Intercept + G + R + D + T}
 $$
 
-Since DRIFT model and ITCH model take the same form (four regressors with intercept), we can write these two into one text file:
+Since DRIFT model and ITCH model take the same form (four regressors with intercept), we can write only one text file for these two models:
 
 ```{r}
 if (!file.exists("./models/model4part1.txt")) {
@@ -58,13 +58,14 @@ if (!file.exists("./models/model4part1.txt")) {
 
 Five conditions:
 
-* Absolute money value, delay framing (e.g., \$5 today vs. \$5 plus an additional \$5 in 4 weeks)
-* Relative money value, delay framing (e.g., \$5 today vs. \$5 plus an additional 100\% in 4 weeks)
-* Standard MEL format (e.g., \$5 today vs. \$10 in 4 weeks)
-* Absolute money value, speedup framing (e.g., \$10 in 4 weeks vs. \$10 minus \$5 today)
-* Relative money value, speedup framing (e.g., \$10 in 4 weeks vs. \$10 minus 50\% today)
+* **Condition 1:** Absolute money value, delay framing (e.g., \$5 today vs. \$5 plus an additional \$5 in 4 weeks)
+* **Condition 2:** Relative money value, delay framing (e.g., \$5 today vs. \$5 plus an additional 100\% in 4 weeks)
+* **Condition 3:** Standard MEL format (e.g., \$5 today vs. \$10 in 4 weeks)
+* **Condition 4:** Absolute money value, speedup framing (e.g., \$10 in 4 weeks vs. \$10 minus \$5 today)
+* **Condition 5:** Relative money value, speedup framing (e.g., \$10 in 4 weeks vs. \$10 minus 50\% today)
 
-```{r}
+```{r, warning=FALSE, message=FALSE, results="hold"}
+## Load required packages
 library(ggplot2)
 library(GGally)
 library(rjags)
@@ -76,6 +77,8 @@ source("lib/deps.R")
 ```
 
 ```{r}
+## NOTE: the code in this chunk is modified from HierarchicalMultipleLinearRegr_loopX.Rmd
+
 ## Set seed for reproducible results
 set.seed(44566) 
 
@@ -84,10 +87,11 @@ set.seed(44566)
 fit.model <- function(data, drift=TRUE) {
   
   # Generate sequential indices for participant IDs
-  subIdx <- rep(1:length(table(data$Subject)), 
-                times=as.integer(table(data$Subject)))
-  Nsubj = length(unique(subIdx))
+  subIdx <- rep(1:length(table(data$Subject)), times=as.integer(table(data$Subject)))
+  Nsubj <- length(unique(subIdx))
   y <- data$LaterOptionChosen
+  
+  ## Create the design matrix for DRIFT model or ITCH model
   if (drift) {
     x <- model.matrix(~ DriftD + DriftR + DriftI + DriftT, data=data)
   } else {
@@ -96,6 +100,7 @@ fit.model <- function(data, drift=TRUE) {
   Nx <- ncol(x)
   Ntotal <- nrow(x)
   
+  ## Prepare data for JAGS
   dat.jags <- dump.format(list(
     x = x, 
     y = y, 
@@ -105,22 +110,29 @@ fit.model <- function(data, drift=TRUE) {
     Ntotal = Ntotal
   ))
   
-  # Initialize the chains
+  ## Initialize the chains
   inits1 <- dump.format(list(b.mu = runif(Nx, -2, 2), .RNG.name="base::Super-Duper", .RNG.seed=99999 ))
   inits2 <- dump.format(list(b.mu = runif(Nx, -2, 2), .RNG.name="base::Wichmann-Hill", .RNG.seed=1234))
   inits3 <- dump.format(list(b.mu = runif(Nx, -2, 2), .RNG.name="base::Mersenne-Twister", .RNG.seed=6666 ))
-    
-  monitor <- c("b.mu") # Tell JAGS latent variables to monitor
   
-  results <- run.jags(model="./models/model4part1.txt", monitor=monitor, data=dat.jags, 
-                      n.chains=3, inits=c(inits1, inits2, inits3), burnin=200, sample=200, thin=1)
+  ## Tell JAGS which latent variables to monitor
+  monitor <- c("b.mu")
+  
+  results <- run.jags(model = "./models/model4part1.txt", 
+                      monitor = monitor, 
+                      data = dat.jags, 
+                      n.chains = 3, 
+                      inits = c(inits1, inits2, inits3), 
+                      burnin = 200, 
+                      sample = 200, 
+                      thin = 1)
   
   return(results)
 }
 ```
 
+Fit DRIFT model to the data:
 ```{r}
-## Fit the data with DRIFT model
 drift.results1 <- fit.model(data=load.data(1))
 drift.results2 <- fit.model(data=load.data(2))
 drift.results3 <- fit.model(data=load.data(3))
@@ -128,8 +140,8 @@ drift.results4 <- fit.model(data=load.data(4))
 drift.results5 <- fit.model(data=load.data(5))
 ```
 
+Fit ITCH model to the data:
 ```{r}
-## Fit the data with ITCH model
 itch.results1 <- fit.model(data=load.data(1), drift=FALSE)
 itch.results2 <- fit.model(data=load.data(2), drift=FALSE)
 itch.results3 <- fit.model(data=load.data(3), drift=FALSE)
@@ -139,8 +151,8 @@ itch.results5 <- fit.model(data=load.data(5), drift=FALSE)
 
 #### Correlation and density plots
 
+Correlation and density plots for DRIFT model:
 ```{r}
-## Correlation and density plots for DRIFT model
 ggpairs(as.data.frame(
   rbind(drift.results1[["mcmc"]][[1]], 
         drift.results1[["mcmc"]][[2]], 
@@ -172,8 +184,8 @@ ggpairs(as.data.frame(
 ), title="DRIFT - Condition 5")
 ```
 
+Correlation and density plots for ITCH model:
 ```{r}
-## Correlation and density plots for ITCH model
 ggpairs(as.data.frame(
   rbind(itch.results1[["mcmc"]][[1]], 
         itch.results1[["mcmc"]][[2]], 
@@ -207,8 +219,8 @@ ggpairs(as.data.frame(
 
 #### Summary tables
 
+Summary tables for DRIFT model:
 ```{r}
-## Summary tables for DRIFT model
 knitr::kable(summary(drift.results1), caption="DRIFT - Condition 1", digits=6, align="c")
 knitr::kable(summary(drift.results2), caption="DRIFT - Condition 2", digits=6, align="c")
 knitr::kable(summary(drift.results3), caption="DRIFT - Condition 3", digits=6, align="c")
@@ -216,14 +228,16 @@ knitr::kable(summary(drift.results4), caption="DRIFT - Condition 4", digits=6, a
 knitr::kable(summary(drift.results5), caption="DRIFT - Condition 5", digits=6, align="c")
 ```
 
+Summary tables for ITCH model:
 ```{r}
-## Summary tables for ITCH model
 knitr::kable(summary(itch.results1), caption="ITCH - Condition 1", digits=6, align="c")
 knitr::kable(summary(itch.results2), caption="ITCH - Condition 2", digits=6, align="c")
 knitr::kable(summary(itch.results3), caption="ITCH - Condition 3", digits=6, align="c")
 knitr::kable(summary(itch.results4), caption="ITCH - Condition 4", digits=6, align="c")
 knitr::kable(summary(itch.results5), caption="ITCH - Condition 5", digits=6, align="c")
 ```
+
+$~$
 
 ### Part 2
 
@@ -238,12 +252,12 @@ Conditions:
 * Condition 5: Relative Losses
 
 Method: Bayesian one-way ANOVA
-```{r}
+```{r, echo=FALSE, fig.cap="Graphical representation of Bayesian hierarchical logistic regression"}
 knitr::include_graphics("./images/model_graph.png")
 ```
 
 ```{r}
-## Note: code in this chunk is modified from the lecture script OneFactorAnovaHomVar.R
+## NOTE: code in this chunk is modified from the lecture script OneFactorAnovaHomVar.R
 source("moustache_plot.r")
 gammaShRaFromModeSD <- function(mode, sd) {
   if (mode <= 0) stop("mode must be > 0")
@@ -324,11 +338,9 @@ knitr::kable(summary(results), digits=6, align="c")
 ```
 
 ```{r}
+## Look at the structure of MCMC samples from the first chain
 rmarkdown::paged_table(data.frame(results$mcmc[[1]]))
 ```
-
-* $b_0$ corresponds to the global mean
-* $b_i$ is interpreted as the deviation from the global mean due to the $i$th group effect
 
 ```{r}
 chains <- results$mcmc
@@ -348,9 +360,25 @@ plotMoustache(chains, as.data.frame(DT), yName = "LaterOptionChosenRate", xName 
 
 Idea: Construct the desired contrasts (i.e. difference) based on the samples and visualize the sample posterior distributions.
 
-**Standard MEL vs. Absolute Gains**
+```{r, echo=FALSE}
+d.contrasts <- data.frame(matrix(c("-1", "0", "1", "0", "0", 
+                                   "0", "-1", "1", "0", "0", 
+                                   "0", "0", "1", "-1", "0", 
+                                   "0", "0", "1", "0", "-1", 
+                                   "1/2", "-1/2", "0", "1/2", "-1/2"), nrow=5, byrow=TRUE))
+colnames(d.contrasts) <- c("Condition 1", "Condition 2", "Condition 3", "Condition 4", "Condition 5")
+rownames(d.contrasts) <- c("Standard MEL vs. Absolute Gains", 
+                           "Standard MEL vs. Relative Gains", 
+                           "Standard MEL vs. Absolute Losses", 
+                           "Standard MEL vs. Relative Losses", 
+                           "Absolute Condition vs. Relative Condition")
+knitr::kable(d.contrasts, align="c", caption="Contrasts table")
+```
+
+Standard MEL vs. Absolute Gains: 
 ```{r}
-ROPE <- c(-0.1, 0.1) # region of practical equivalence
+## Region of practical equivalence
+ROPE <- c(-0.1, 0.1)
 
 dif <- b.samples$Condition3 - b.samples$Condition1
 d.density <- with(density(dif), data.frame(x, y))
@@ -360,7 +388,7 @@ ggplot(data=d.density, mapping=aes(x=x, y=y)) +
   labs(title="Standard MEL vs. Absolute Gains", x="Difference", y="Density") 
 ```
 
-**Standard MEL vs. Relative Gains**
+Standard MEL vs. Relative Gains:
 ```{r, warning=FALSE}
 dif <- b.samples$Condition3 - b.samples$Condition2
 d.density <- with(density(dif), data.frame(x, y))
@@ -370,7 +398,7 @@ ggplot(data=d.density, mapping=aes(x=x, y=y)) +
   labs(title="Standard MEL vs. Relative Gains", x="Difference", y="Density")
 ```
 
-**Standard MEL vs. Absolute Losses**
+Standard MEL vs. Absolute Losses: 
 ```{r, warning=FALSE}
 dif <- b.samples$Condition3 - b.samples$Condition4
 d.density <- with(density(dif), data.frame(x, y))
@@ -380,7 +408,7 @@ ggplot(data=d.density, mapping=aes(x=x, y=y)) +
   labs(title="Standard MEL vs. Absolute Losses", x="Difference", y="Density")
 ```
 
-**Standard MEL vs. Relative Losses**
+Standard MEL vs. Relative Losses:
 ```{r, warning=FALSE}
 dif <- b.samples$Condition3 - b.samples$Condition5
 d.density <- with(density(dif), data.frame(x, y))
@@ -390,10 +418,9 @@ ggplot(data=d.density, mapping=aes(x=x, y=y)) +
   labs(title="Standard MEL vs. Relative Losses", x="Difference", y="Density")
 ```
 
-**Absolute Condition vs. Relative Condition**
+Absolute Condition vs. Relative Condition: 
 ```{r, warning=FALSE}
-dif <- (b.samples$Condition1 + b.samples$Condition4)/2 - 
-  (b.samples$Condition2 + b.samples$Condition5)/2
+dif <- (b.samples$Condition1 + b.samples$Condition4)/2 - (b.samples$Condition2 + b.samples$Condition5)/2
 d.density <- with(density(dif), data.frame(x, y))
 ggplot(data=d.density, mapping=aes(x=x, y=y)) +
   geom_area(aes(x=ifelse(x>hdi(dif)[1] & x<hdi(dif)[2], x, NA), y=y), fill=6, alpha=0.2) +
