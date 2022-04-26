@@ -21,7 +21,7 @@ $~$
 
 ### Part 1
 
-The goal of this task is to compare the *intertemporal choice heuristic* (ITCH) model with the *difference-ratio-interest-finance-time* (DRIFT) model across five closely related conditions:
+This task is to compare the *difference-ratio-interest-finance-time* (DRIFT) model with the *intertemporal choice heuristic* (ITCH) model across five closely related conditions:
 
 * **Condition 1:** Absolute money value, delay framing (e.g., \$5 today vs. \$5 plus an additional \$5 in 4 weeks)
 * **Condition 2:** Relative money value, delay framing (e.g., \$5 today vs. \$5 plus an additional 100\% in 4 weeks)
@@ -44,7 +44,7 @@ $$
 Since DRIFT model and ITCH model take the same form (four regressors with intercept), we can write one single text file for these two models:
 
 ```{r}
-if (!file.exists("./models/model4part1.txt")) {
+if (!file.exists("./models/hierarchical_logistic_reg.txt")) {
   cat("model {
       for (k in 1:Nx) {
         b.mu[k] ~ dnorm(0, 0.0000001) # prior for coefficients (including intercept)
@@ -58,11 +58,11 @@ if (!file.exists("./models/model4part1.txt")) {
       }
       
       for (i in 1:Ntotal) {
-        p[i] = ilogit( sum(b.s[subIdx[i], 1:Nx] * x[i, 1:Nx]) )
+        p[i] <- ilogit( sum(b.s[subIdx[i], 1:Nx] * x[i, 1:Nx]) )
         y[i] ~ dbern(p[i])
-        ly[i] = log(p[i])
+        ly[i] <- log(p[i])
       }
-    }", file="./models/model4part1.txt")
+    }", file="./models/hierarchical_logistic_reg.txt")
 } else {
   print("The text file already existed!")
 }
@@ -122,7 +122,7 @@ fit.model <- function(data, drift=TRUE) {
   ## Tell JAGS which latent variables to monitor
   monitor <- c("b.mu")
   
-  results <- run.jags(model = "./models/model4part1.txt", 
+  results <- run.jags(model = "./models/hierarchical_logistic_reg.txt", 
                       monitor = monitor, 
                       data = dat.jags, 
                       n.chains = 3, 
@@ -157,69 +157,91 @@ itch.results5 <- fit.model(data=load.data(5), drift=FALSE)
 
 Correlation and density plots for DRIFT model:
 ```{r}
-ggpairs(as.data.frame(
-  rbind(drift.results1[["mcmc"]][[1]], 
-        drift.results1[["mcmc"]][[2]], 
-        drift.results1[["mcmc"]][[3]])
-), title="DRIFT - Condition 1")
+d.drift1 <- data.frame(rbind(
+  drift.results1[["mcmc"]][[1]], 
+  drift.results1[["mcmc"]][[2]], 
+  drift.results1[["mcmc"]][[3]]
+))
+names(d.drift1) <- c("Intercept", "DriftD", "DriftR", "DriftI", "DriftT")
+ggpairs(d.drift1, title="DRIFT - Condition 1") + theme_minimal()
 
-ggpairs(as.data.frame(
-  rbind(drift.results2[["mcmc"]][[1]], 
-        drift.results2[["mcmc"]][[2]], 
-        drift.results2[["mcmc"]][[3]])
-), title="DRIFT - Condition 2")
+d.drift2 <- data.frame(rbind(
+  drift.results2[["mcmc"]][[1]], 
+  drift.results2[["mcmc"]][[2]], 
+  drift.results2[["mcmc"]][[3]]
+))
+names(d.drift2) <- c("Intercept", "DriftD", "DriftR", "DriftI", "DriftT")
+ggpairs(d.drift2, title="DRIFT - Condition 2") + theme_minimal()
 
-ggpairs(as.data.frame(
-  rbind(drift.results3[["mcmc"]][[1]], 
-        drift.results3[["mcmc"]][[2]], 
-        drift.results3[["mcmc"]][[3]])
-), title="DRIFT - Condition 3")
+d.drift3 <- data.frame(rbind(
+  drift.results3[["mcmc"]][[1]], 
+  drift.results3[["mcmc"]][[2]], 
+  drift.results3[["mcmc"]][[3]]
+))
+names(d.drift3) <- c("Intercept", "DriftD", "DriftR", "DriftI", "DriftT")
+ggpairs(d.drift3, title="DRIFT - Condition 3") + theme_minimal()
 
-ggpairs(as.data.frame(
-  rbind(drift.results4[["mcmc"]][[1]], 
-        drift.results4[["mcmc"]][[2]], 
-        drift.results4[["mcmc"]][[3]])
-), title="DRIFT - Condition 4")
+d.drift4 <- data.frame(rbind(
+  drift.results4[["mcmc"]][[1]], 
+  drift.results4[["mcmc"]][[2]], 
+  drift.results4[["mcmc"]][[3]]
+))
+names(d.drift4) <- c("Intercept", "DriftD", "DriftR", "DriftI", "DriftT")
+ggpairs(d.drift4, title="DRIFT - Condition 4") + theme_minimal()
 
-ggpairs(as.data.frame(
-  rbind(drift.results5[["mcmc"]][[1]], 
-        drift.results5[["mcmc"]][[2]], 
-        drift.results5[["mcmc"]][[3]])
-), title="DRIFT - Condition 5")
+d.drift5 <- data.frame(rbind(
+  drift.results5[["mcmc"]][[1]], 
+  drift.results5[["mcmc"]][[2]], 
+  drift.results5[["mcmc"]][[3]]
+))
+names(d.drift5) <- c("Intercept", "DriftD", "DriftR", "DriftI", "DriftT")
+ggpairs(d.drift5, title="DRIFT - Condition 5") + theme_minimal()
 ```
+
 
 Correlation and density plots for ITCH model:
 ```{r}
-ggpairs(as.data.frame(
-  rbind(itch.results1[["mcmc"]][[1]], 
-        itch.results1[["mcmc"]][[2]], 
-        itch.results1[["mcmc"]][[3]])
-), title="ITCH - Condition 1")
+d.itch1 <- data.frame(rbind(
+  itch.results1[["mcmc"]][[1]], 
+  itch.results1[["mcmc"]][[2]], 
+  itch.results1[["mcmc"]][[3]]
+))
+names(d.itch1) <- c("Intercept", "G", "R", "D", "T")
+ggpairs(d.itch1, title="ITCH - Condition 1") + theme_minimal()
 
-ggpairs(as.data.frame(
-  rbind(itch.results2[["mcmc"]][[1]], 
-        itch.results2[["mcmc"]][[2]], 
-        itch.results2[["mcmc"]][[3]])
-), title="ITCH - Condition 2")
+d.itch2 <- data.frame(rbind(
+  itch.results2[["mcmc"]][[1]], 
+  itch.results2[["mcmc"]][[2]], 
+  itch.results2[["mcmc"]][[3]]
+))
+names(d.itch2) <- c("Intercept", "G", "R", "D", "T")
+ggpairs(d.itch2, title="ITCH - Condition 2") + theme_minimal()
 
-ggpairs(as.data.frame(
-  rbind(itch.results3[["mcmc"]][[1]], 
-        itch.results3[["mcmc"]][[2]], 
-        itch.results3[["mcmc"]][[3]])
-), title="ITCH - Condition 3")
+d.itch3 <- data.frame(rbind(
+  itch.results3[["mcmc"]][[1]], 
+  itch.results3[["mcmc"]][[2]], 
+  itch.results3[["mcmc"]][[3]]
+))
+names(d.itch3) <- c("Intercept", "G", "R", "D", "T")
+ggpairs(d.itch3, title="ITCH - Condition 3") + theme_minimal()
 
-ggpairs(as.data.frame(
-  rbind(itch.results4[["mcmc"]][[1]], 
-        itch.results4[["mcmc"]][[2]], 
-        itch.results4[["mcmc"]][[3]])
-), title="ITCH - Condition 4")
+d.itch4 <- data.frame(rbind(
+  itch.results4[["mcmc"]][[1]], 
+  itch.results4[["mcmc"]][[2]], 
+  itch.results4[["mcmc"]][[3]]
+))
+names(d.itch4) <- c("Intercept", "G", "R", "D", "T")
+ggpairs(d.itch4, title="ITCH - Condition 4") + theme_minimal()
 
-ggpairs(as.data.frame(
-  rbind(itch.results5[["mcmc"]][[1]], 
-        itch.results5[["mcmc"]][[2]], 
-        itch.results5[["mcmc"]][[3]])
-), title="ITCH - Condition 5")
+d.itch5 <- data.frame(rbind(
+  itch.results5[["mcmc"]][[1]], 
+  itch.results5[["mcmc"]][[2]], 
+  itch.results5[["mcmc"]][[3]]
+))
+names(d.itch5) <- c("Intercept", "G", "R", "D", "T")
+ggpairs(d.itch5, title="ITCH - Condition 5") + theme_minimal()
 ```
+
 
 #### Summary tables
 
@@ -245,6 +267,10 @@ $~$
 
 ### Part 2
 
+This task is to compare the percentage of Larger-Later choices by framing condition using a **robust** Bayesian ANOVA-like model.
+
+#### Bayesian one-way ANOVA
+
 Assumption: the variance is homogeneous across different conditions
 
 Conditions:
@@ -256,15 +282,42 @@ Conditions:
 * Condition 5: Relative Losses
 
 Graphical representation: 
-```{r, echo=FALSE, fig.cap="Graphical representation of Bayesian hierarchical logistic regression"}
+```{r, echo=FALSE, fig.cap="Graphical representation of robust Bayesian ANOVA model"}
 knitr::include_graphics("./images/model_graph.png")
 ```
 
-#### Bayesian one-way ANOVA
+* The robust Bayesian ANOVA model uses a $t$-distribution as it has heavier tails and is more robust to outliers than the normal distribution. 
+* We can control the kurtosis of the distribution by assuming a prior for the degrees of freedom parameter $\nu$. We assume that the degrees of freedom parameter $\nu$ in the $t$-distribution follows an exponential distribution with the rate parameter $\lambda=\frac{1}{30}$ (heavy-tailed).
 
 ```{r}
-## Look at the JAGS model (from the lecture script OneFactorAnovaHomVar.R)
-writeLines(readLines("./models/1way_ANOVA_homogenous_var.txt"))
+if (!file.exists("./models/robust_1way_ANOVA_homo_var.txt")) {
+  cat("model {
+      ySigma ~ dunif( ySD/100 , ySD*10 )
+      a0 ~ dnorm( yMean , 1/(ySD*5)^2 )
+      aSigma ~ dgamma( agammaShRa[1] , agammaShRa[2] )
+      
+      for ( j in 1:NxLvl ) {
+          a[j] ~ dnorm( 0.0 , 1/aSigma^2 )
+      }
+      
+      nu ~ dexp(1/30.0) # degrees of freedom for t-distribution
+      for ( i in 1:Ntotal ) {
+          y[i] ~ dt( a0 + a[x[i]] , 1/ySigma^2 , nu ) # robust estimation
+      }
+      
+      # Convert a0, a[] to sum-to-zero b0,b[] :
+      for ( j in 1:NxLvl ) {
+          m[j] <- a0 + a[j] # cell means
+      }
+        
+      b0 <- mean( m[1:NxLvl] )
+      for ( j in 1:NxLvl ) {
+          b[j] <- m[j] - b0
+      }
+  }", file="./models/robust_1way_ANOVA_homo_var.txt")
+} else {
+  print("The text file already existed!")
+}
 ```
 
 
@@ -331,7 +384,7 @@ monitor <- c("b0", "b", "m", "aSigma", "ySigma")
 adaptSteps <- 500 
 burnInSteps <- 5000
 nChains <- 3
-results <- run.jags(model = "./models/1way_ANOVA_homogenous_var.txt", 
+results <- run.jags(model = "./models/robust_1way_ANOVA_homo_var.txt", 
                     monitor = monitor, 
                     data = dataList,  
                     inits = c(inits1, inits2, inits3), 
@@ -346,7 +399,7 @@ results <- run.jags(model = "./models/1way_ANOVA_homogenous_var.txt",
 
 ```{r}
 ## Print the summary results in a table 
-knitr::kable(summary(results), digits=6, align="c", caption="Summary results for Bayesian one-way ANOVA")
+knitr::kable(summary(results), digits=6, align="c", caption="Summary results for robust Bayesian one-way ANOVA")
 ```
 
 ```{r}
@@ -356,7 +409,7 @@ rmarkdown::paged_table(data.frame(results$mcmc[[1]]))
 
 ```{r, results="asis"}
 chains <- results$mcmc
-b.samples <- as.data.frame(rbind(chains[[1]][, 2:6], chains[[2]][, 2:6], chains[[3]][, 2:6]))
+b.samples <- data.frame(rbind(chains[[1]][, 2:6], chains[[2]][, 2:6], chains[[3]][, 2:6]))
 names(b.samples) <- c("Condition1", "Condition2", "Condition3", "Condition4", "Condition5")
 knitr::kable(summary(b.samples), caption="Summary statistics for five conditions")
 ```
@@ -365,12 +418,12 @@ knitr::kable(summary(b.samples), caption="Summary statistics for five conditions
 
 ```{r}
 ## Moustache Plot
-plotMoustache(chains, as.data.frame(DT), yName = "LaterOptionChosenRate", xName = "Condition")
+plotMoustache(chains, data.frame(DT), yName = "LaterOptionChosenRate", xName = "Condition")
 ```
 
 #### Contrasts
 
-Idea: Construct the desired contrasts (i.e. difference) based on the samples and visualize the sample posterior distributions.
+Idea: construct the desired contrasts by taking the difference between conditions and visualize the sample posterior distributions.
 
 ```{r, echo=FALSE}
 d.contrasts <- data.frame(matrix(c("-1", "0", "1", "0", "0", 
@@ -397,7 +450,8 @@ d.density <- with(density(dif), data.frame(x, y))
 ggplot(data=d.density, mapping=aes(x=x, y=y)) +
   geom_area(aes(x=ifelse(x>hdi(dif)[1] & x<hdi(dif)[2], x, 0), y=y), fill=2, alpha=0.2) + 
   geom_line(color=2) + ylim(0, 20) + geom_vline(xintercept=ROPE, linetype="longdash", color="red") + 
-  labs(title="Standard MEL vs. Absolute Gains", x="Difference", y="Density") 
+  geom_text(aes(x=0, y=5, label="95% HDI"), color=2, check_overlap=TRUE) + 
+  labs(title="Standard MEL vs. Absolute Gains", x="Difference", y="Density") + theme_minimal()
 ```
 
 Standard MEL vs. Relative Gains:
@@ -407,7 +461,8 @@ d.density <- with(density(dif), data.frame(x, y))
 ggplot(data=d.density, mapping=aes(x=x, y=y)) +
   geom_area(aes(x=ifelse(x>hdi(dif)[1] & x<hdi(dif)[2], x, NA), y=y), fill=3, alpha=0.2) +
   geom_line(color=3) + ylim(0, 20) + geom_vline(xintercept=ROPE, linetype="longdash", color="red") + 
-  labs(title="Standard MEL vs. Relative Gains", x="Difference", y="Density")
+  geom_text(aes(x=-0.08, y=5, label="95% HDI"), color=3, check_overlap=TRUE) + 
+  labs(title="Standard MEL vs. Relative Gains", x="Difference", y="Density") + theme_minimal()
 ```
 
 Standard MEL vs. Absolute Losses: 
@@ -416,8 +471,9 @@ dif <- b.samples$Condition3 - b.samples$Condition4
 d.density <- with(density(dif), data.frame(x, y))
 ggplot(data=d.density, mapping=aes(x=x, y=y)) +
   geom_area(aes(x=ifelse(x>hdi(dif)[1] & x<hdi(dif)[2], x, NA), y=y), fill=4, alpha=0.2) +
-  geom_line(color=4) + ylim(0, 20) + geom_vline(xintercept=ROPE, linetype="longdash", color="red") +
-  labs(title="Standard MEL vs. Absolute Losses", x="Difference", y="Density")
+  geom_line(color=4) + ylim(0, 20) + geom_vline(xintercept=ROPE, linetype="longdash", color="red") + 
+  geom_text(aes(x=-0.15, y=5, label="95% HDI"), color=4, check_overlap=TRUE) + 
+  labs(title="Standard MEL vs. Absolute Losses", x="Difference", y="Density") + theme_minimal()
 ```
 
 Standard MEL vs. Relative Losses:
@@ -427,7 +483,8 @@ d.density <- with(density(dif), data.frame(x, y))
 ggplot(data=d.density, mapping=aes(x=x, y=y)) +
   geom_area(aes(x=ifelse(x>hdi(dif)[1] & x<hdi(dif)[2], x, NA), y=y), fill=5, alpha=0.2) +
   geom_line(color=5) + ylim(0, 20) + geom_vline(xintercept=ROPE, linetype="longdash", color="red") + 
-  labs(title="Standard MEL vs. Relative Losses", x="Difference", y="Density")
+  geom_text(aes(x=-0.15, y=5, label="95% HDI"), color=5, check_overlap=TRUE) + 
+  labs(title="Standard MEL vs. Relative Losses", x="Difference", y="Density") + theme_minimal()
 ```
 
 Absolute Condition vs. Relative Condition: 
@@ -436,7 +493,8 @@ dif <- (b.samples$Condition1 + b.samples$Condition4)/2 - (b.samples$Condition2 +
 d.density <- with(density(dif), data.frame(x, y))
 ggplot(data=d.density, mapping=aes(x=x, y=y)) +
   geom_area(aes(x=ifelse(x>hdi(dif)[1] & x<hdi(dif)[2], x, NA), y=y), fill=6, alpha=0.2) +
-  geom_line(color=6) + ylim(0, 25) + geom_vline(xintercept=ROPE, linetype="longdash", color="red") +
-  labs(title="Absolute Condition vs. Relative Condition", x="Difference", y="Density")
+  geom_line(color=6) + ylim(0, 30) + geom_vline(xintercept=ROPE, linetype="longdash", color="red") +
+  geom_text(aes(x=-0.04, y=5, label="95% HDI"), color=6, check_overlap=TRUE) + 
+  labs(title="Absolute Condition vs. Relative Condition", x="Difference", y="Density") + theme_minimal()
 ```
 
