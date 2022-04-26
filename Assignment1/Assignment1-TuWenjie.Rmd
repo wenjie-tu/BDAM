@@ -449,7 +449,7 @@ results <- run.jags(
 
 ```{r}
 ## Print the summary of the results in a table
-knitr::kable(summary(results), caption="Summary results for the IS score")
+knitr::kable(summary(results), caption="Summary results for the IQ score")
 ```
 
 ```{r}
