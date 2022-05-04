@@ -1,0 +1,26 @@
+model{
+  for (g in 1:Ngrps) {
+    b0.mu[g] ~ dnorm(0.0, 1.0E-5) # prior intercept
+    b1.mu[g] ~ dnorm(0.0, 1.0E-5) # prior coefficient1
+    b2.mu[g] ~ dnorm(0.0, 1.0E-5) # prior coefficient2
+    
+    b0.sig[g] ~ dunif(1.0E-4, 100) # prior intercept error
+    b1.sig[g] ~ dunif(1.0E-4, 100) # prior coefficient1 error
+    b2.sig[g] ~ dunif(1.0E-4, 100) # prior coefficient2 error
+    
+    sig[g] ~ dunif(1.0E-5, 100) # prior for the sd
+    
+    for (s in 1:Nsubj[g]) {
+      b0.s[s, g] ~ dnorm(b0.mu[g], 1/b0.sig[g]^2)
+      b1.s[s, g] ~ dnorm(b1.mu[g], 1/b1.sig[g]^2)
+      b2.s[s, g] ~ dnorm(b2.mu[g], 1/b2.sig[g]^2)
+    }
+  }
+  
+  for (i in 1:Ntotal) {
+    mu[i] <- b0.s[subIdx[i], grpIdx[i]] + 
+    b1.s[subIdx[i], grpIdx[i]] * x1[i] + 
+    b2.s[subIdx[i], grpIdx[i]] * x2[i] 
+    y[i] ~ dnorm(mu[i], 1/sig[grpIdx[i]]^2)
+  }
+}

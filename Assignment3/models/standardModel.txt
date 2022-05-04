@@ -1,0 +1,18 @@
+model{
+  for (g in 1:Ngrps) {
+    # group-specific priors
+    grp.mu[g] ~ dnorm(0, 1.0E-5) 
+    grp.sig[g] ~ dunif(1.0E-6, 100)
+    
+    # prior for the standard deviation of the response
+    sig[g] ~ dunif(1.0E-5, 100)
+    
+    for (s in 1:Nsubj[g]) {
+      subj.mu[s, g] ~ dnorm(grp.mu[g], 1/grp.sig[g]^2)
+    }
+  }
+  
+  for (i in 1:Ntotal) {
+    y[i] ~ dnorm(subj.mu[subIdx[i], grpIdx[i]], 1/sig[grpIdx[i]]^2)
+  }
+}
