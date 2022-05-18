@@ -18,9 +18,7 @@ model{
   }
   
   for (i in 1:Ntotal) {
-    mu[i] <- b0.s[subIdx[i], grpIdx[i]] + 
-    b1.s[subIdx[i], grpIdx[i]] * x1[i] + 
-    b2.s[subIdx[i], grpIdx[i]] * x2[i] 
+    mu[i] <- b0.s[subIdx[i], grpIdx[i]] + b1.s[subIdx[i], grpIdx[i]] * x1[i] + b2.s[subIdx[i], grpIdx[i]] * x2[i] 
     y[i] ~ dnorm(mu[i], 1/sig[grpIdx[i]]^2)
   }
 }

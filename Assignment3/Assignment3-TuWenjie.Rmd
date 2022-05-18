@@ -21,10 +21,14 @@ $~$
 
 ### Part 1
 
+Description:
+
+*The data for part 1 represent the amounts that two groups of participants (A and B) are willing to pay for snack food items. Each individual places bids to buy 60 different food items. All participants saw the same 60 foods. They were given an endowment of 5 CHF per food item to use in purchasing the food items from the experimenter. Thus, the maximum bid was 5, even if the participant might have been willing to pay more than 5 CHF.*
+
 ```{r}
 # Read in data for willingness to pay
 d.wtp <- read.csv("./data/wtp_data.csv")
-head(d.wtp)
+rmarkdown::paged_table(d.wtp)
 ```
 
 ```{r, message=FALSE, warning=FALSE}
@@ -34,6 +38,8 @@ library(rjags)
 library(runjags)
 library(HDInterval)
 ```
+
+#### Histogram and density plot
 
 ```{r, fig.show='hold', out.width='50%'}
 ggplot(d.wtp, aes(x=Bid, y=..density.., color=Group, fill=Group)) + 
@@ -45,8 +51,10 @@ ggplot(d.wtp, aes(x=Bid, y=..density.., color=Group, fill=Group)) +
   theme_minimal()
 ```
 
+#### Summary tables and correlation plots
+
 ```{r}
-# Write in JAGS model into text file
+# Write in JAGS model
 modelString <- "model{
   for (g in 1:Ngrps) {
     # group-specific priors
@@ -66,7 +74,7 @@ modelString <- "model{
   }
 }"
 
-writeLines(modelString, con="./models/standardModel.txt")
+writeLines(modelString, con="./models/StandardModel.txt")
 ```
 
 ```{r}
@@ -76,6 +84,14 @@ subIdx <- d.wtp$Subject
 grpIdx <- as.numeric(as.factor(d.wtp$Group))
 Ngrps <- length(unique(d.wtp$Group))
 Nsubj <- c(length(unique(d.wtp$Subject)), length(unique(d.wtp$Subject)))
+```
+
+```{r, include=FALSE, eval=FALSE}
+mean(d.wtp[d.wtp$Group=="A", "Bid"])
+mean(d.wtp[d.wtp$Group=="B", "Bid"])
+
+sd(d.wtp[d.wtp$Group=="A", "Bid"])
+sd(d.wtp[d.wtp$Group=="B", "Bid"])
 ```
 
 ```{r}
@@ -91,19 +107,17 @@ dat.standard <- dump.format(list(y = y,
                                  Ngrps = Ngrps, 
                                  Nsubj = Nsubj))
 
-inits1 <- dump.format(list(grp.mu=c(2.5, 2.5), grp.sig=c(0.9, 0.9), sig=c(0.3, 0.3), 
-                           .RNG.name="base::Super-Duper", .RNG.seed=99999))
-inits2 <- dump.format(list(grp.mu=c(1.0, 1.0), grp.sig=c(0.3, 0.3), sig=c(0.1, 0.1), 
-                           .RNG.name="base::Wichmann-Hill", .RNG.seed=1234))
-inits3 <- dump.format(list(grp.mu=c(4.0, 4.0), grp.sig=c(0.7, 0.7), sig=c(0.5, 0.5), 
-                           .RNG.name="base::Mersenne-Twister", .RNG.seed=6666))
+# Let JAGS initialize
+inits1 <- dump.format(list(.RNG.name="base::Super-Duper", .RNG.seed=99999))
+inits2 <- dump.format(list(.RNG.name="base::Wichmann-Hill", .RNG.seed=1234))
+inits3 <- dump.format(list(.RNG.name="base::Mersenne-Twister", .RNG.seed=6666))
 
 # Tell JAGS which latent variables to monitor
 monitor = c("grp.mu", "grp.sig", "sig")
 ```
 
 ```{r}
-results.standard <- run.jags(model = "./models/standardModel.txt", 
+results.standard <- run.jags(model = "./models/StandardModel.txt", 
                              monitor = monitor, 
                              data = dat.standard, 
                              n.chains = n.chains, 
@@ -126,7 +140,7 @@ ggpairs(chains.standard, title="Correlation plot for standard model") + theme_mi
 ```
 
 ```{r}
-# Write in JAGS model into text file
+# Write in JAGS model
 modelString <- "model{
   for (g in 1:Ngrps) {
     # group-specific priors
@@ -147,7 +161,7 @@ modelString <- "model{
   }
 }"
 
-writeLines(modelString, con="./models/censoredModel.txt")
+writeLines(modelString, con="./models/CensoredModel.txt")
 ```
 
 ```{r}
@@ -184,11 +198,11 @@ for (i in 1:length(y)) {
   # if y is censored 
   if (is.na(y[i])) { 
     # if it is from the lowest bin
-    if (ybin[i]==0) { 
+    if (ybin[i] == 0) { 
       # initialize at below the lower bound of threshold
       yInit[i] <- threshMat[i, 1] - 1 
       # if it is from the highest bin
-    } else if (ybin[i]==2) { 
+    } else if (ybin[i] == 2) { 
       # initialize at above the upper bound of threshold
       yInit[i] <- threshMat[i, 2] + 1 
     } else {
@@ -209,19 +223,16 @@ dat.censored <- dump.format(list(y = y,
                                  threshMat = threshMat, 
                                  ybin = ybin))
 
-inits1 <- dump.format(list(grp.mu=c(2.5, 2.5), grp.sig=c(0.9, 0.9), sig=c(0.3, 0.3), 
-                           .RNG.name="base::Super-Duper", .RNG.seed=99999))
-inits2 <- dump.format(list(grp.mu=c(1.0, 1.0), grp.sig=c(0.3, 0.3), sig=c(0.1, 0.1), 
-                           .RNG.name="base::Wichmann-Hill", .RNG.seed=1234))
-inits3 <- dump.format(list(grp.mu=c(4.0, 4.0), grp.sig=c(0.7, 0.7), sig=c(0.5, 0.5), 
-                           .RNG.name="base::Mersenne-Twister", .RNG.seed=6666))
+inits1 <- dump.format(list(.RNG.name="base::Super-Duper", .RNG.seed=99999))
+inits2 <- dump.format(list(.RNG.name="base::Wichmann-Hill", .RNG.seed=1234))
+inits3 <- dump.format(list(.RNG.name="base::Mersenne-Twister", .RNG.seed=6666))
 
 # Tell JAGS which latent variables to monitor
 monitor = c("grp.mu", "grp.sig", "sig")
 ```
 
 ```{r}
-results.censored <- run.jags(model = "./models/censoredModel.txt", 
+results.censored <- run.jags(model = "./models/CensoredModel.txt", 
                              monitor = monitor, 
                              data = dat.censored, 
                              n.chains = n.chains, 
@@ -243,6 +254,8 @@ chains.censored <- data.frame(rbind(results.censored[["mcmc"]][[1]],
 ggpairs(chains.censored, title="Correlation plot for censored model") + theme_minimal()
 ```
 
+#### Empirical density based on estimates
+
 ```{r}
 mu1.standard <- summary(results.standard)["grp.mu[1]", "Mean"]
 mu2.standard <- summary(results.standard)["grp.mu[2]", "Mean"]
@@ -253,6 +266,7 @@ sig2.standard <- summary(results.standard)["grp.sig[2]", "Mean"]
 ```{r}
 # Set seed for reproducible results
 set.seed(2022)
+
 # Set sample size 
 M <- 1000
 
@@ -296,6 +310,10 @@ ggplot(d.plot, aes(x=Bid, y=..density.., color=Group, fill=Group)) +
   labs(title="Density plot of samples (censored model)", y="Density")
 ```
 
+#### Contrasts
+
+Contrasts are based on the difference between sample posterior distributions of parameters
+
 ```{r}
 contrast.mu.std <- chains.standard[, "grp.mu.1."] - chains.standard[, "grp.mu.2."]
 contrast.sig.std <- chains.standard[, "grp.sig.1."] - chains.standard[, "grp.sig.2."]
@@ -304,13 +322,12 @@ contrast.mu.csd <- chains.censored[, "grp.mu.1."] - chains.censored[, "grp.mu.2.
 contrast.sig.csd <- chains.censored[, "grp.sig.1."] - chains.censored[, "grp.sig.2."]
 ```
 
-
 ```{r}
 ggplot(data.frame(x=contrast.mu.std), aes(x=x, y=..density..)) + 
   geom_histogram(bins=30, alpha=0.2, color=3, fill=3) + 
   geom_vline(xintercept=hdi(contrast.mu.std), color=2, lty="longdash") +
   labs(title="Histogram of difference between two group means (standard model)", 
-       x=expression(Delta~mu), y="Frequency density") + theme_minimal()
+       x=expression(Delta~mu), y="Density") + theme_minimal()
 ```
 
 ```{r}
@@ -318,16 +335,15 @@ ggplot(data.frame(x=contrast.sig.std), aes(x=x, y=..density..)) +
   geom_histogram(bins=30, alpha=0.2, color=4, fill=4) + 
   geom_vline(xintercept=hdi(contrast.sig.std), color=2, lty="longdash") +
   labs(title="Histogram of difference between two group standard deviations (standard model)", 
-       x=expression(Delta~sigma), y="Frequency density") + theme_minimal()
+       x=expression(Delta~sigma), y="Density") + theme_minimal()
 ```
-
 
 ```{r}
 ggplot(data.frame(x=contrast.mu.csd), aes(x=x, y=..density..)) + 
   geom_histogram(bins=30, alpha=0.2, color=5, fill=5) + 
   geom_vline(xintercept=hdi(contrast.mu.csd), color=2, lty="longdash") +
   labs(title="Histogram of difference between two group means (censored model)", 
-       x=expression(Delta~mu), y="Frequency density") + theme_minimal()
+       x=expression(Delta~mu), y="Density") + theme_minimal()
 ```
 
 ```{r}
@@ -335,13 +351,34 @@ ggplot(data.frame(x=contrast.sig.std), aes(x=x, y=..density..)) +
   geom_histogram(bins=30, alpha=0.2, color=6, fill=6) + 
   geom_vline(xintercept=hdi(contrast.sig.csd), color=2, lty="longdash") +
   labs(title="Histogram of difference between two group standard deviations (censored model)", 
-       x=expression(Delta~sigma), y="Frequency density") + theme_minimal()
+       x=expression(Delta~sigma), y="Density") + theme_minimal()
 ```
 
+We want to test whether group-level means and standard deviations differ across group A and group B in the standard normal model and censored normal model separately using 95% highest density intervals (HDIs).
+
+$$
+\begin{aligned}
+\mu_1 & \overset{?}{=}\mu_2 \\
+\sigma_1& \overset{?}{=}\sigma_2
+\end{aligned}
+$$
+
+* For the standard model, we see that both $\Delta\mu=0$ and $\Delta\sigma$ lie in their 95% HDIs. 
+* For the censored model, we see that the 95% HDI for $\Delta\mu$ does not include $\Delta\mu=0$ while the 95% HDI for $\Delta\sigma$ includes $\Delta\sigma=0$.
+
+We therefore conclude that with 95% HDIs both the group-level means and standard deviations do not differ in the standard normal model whereas the group-level means do differ but standard deviations do not differ in the censored normal model.
 
 $~$
 
 ### Part 2
+
+Description:
+
+*The data for part 2 represent ratings on the desire to eat a food item a Likert scale ("Strong No", "No", "Neutral", "Yes", "Strong Yes"). These categorical responses are recorded as the numbers from -2 to 2 in the data file. There are groups of participants (A and B). Each individual rated 60 different food items in terms of the desire to eat on the Likert scale above, as well as two different attributes ($x_1$ and $x_2$) of the food items on a visual analog scale. We will assume that these visual analog ratings are continuous and censored by the endpoints of the scale. All participants saw the same 60 food items.*
+
+$$
+\text{Rating}=\beta_0+\beta_1\cdot x_1+\beta_2\cdot x_2+\text{error}
+$$
 
 ```{r}
 d.ratings <- read.csv("./data/ratings_data.csv")
@@ -349,14 +386,22 @@ d.ratings$Group <- factor(d.ratings$Group)
 ```
 
 ```{r}
-mosaicplot(Rating ~ Group, data=d.ratings, col=2:3)
+mosaicplot(Rating ~ Group, data=d.ratings, col=2:3, main="Mosaic plot")
 ```
 
-```{r}
+#### Bar plots
+
+```{r, fig.show='hold', out.width='50%'}
 ggplot(d.ratings, aes(x=Rating, fill=Group, color=Group)) + 
   geom_bar(stat="count", position=position_dodge2(preserve="single"), alpha=0.2) + 
   labs(title="Grouped bar plot", y="Count") + theme_minimal()
+
+ggplot(d.ratings, aes(x=Rating)) + 
+  geom_bar(stat="count", position=position_dodge2(preserve="single"), alpha=0.2, color=4, fill=4) + 
+  labs(title="Pooled bar plot", y="Count") + theme_minimal()
 ```
+
+#### Summary tables and correlation plots
 
 ```{r}
 modelString <- "model{
@@ -379,9 +424,7 @@ modelString <- "model{
   }
   
   for (i in 1:Ntotal) {
-    mu[i] <- b0.s[subIdx[i], grpIdx[i]] + 
-    b1.s[subIdx[i], grpIdx[i]] * x1[i] + 
-    b2.s[subIdx[i], grpIdx[i]] * x2[i] 
+    mu[i] <- b0.s[subIdx[i], grpIdx[i]] + b1.s[subIdx[i], grpIdx[i]] * x1[i] + b2.s[subIdx[i], grpIdx[i]] * x2[i] 
     y[i] ~ dnorm(mu[i], 1/sig[grpIdx[i]]^2)
   }
 }"
@@ -389,6 +432,7 @@ writeLines(modelString, con="./models/LinearModel.txt")
 ```
 
 ```{r}
+# Prepare data for JAGS
 x1 <- d.ratings$x1
 x2 <- d.ratings$x2
 y <- d.ratings$Rating
@@ -397,9 +441,7 @@ subIdx <- d.ratings$Subject
 grpIdx <- as.numeric(as.factor(d.ratings$Group))
 Ngrps <- length(unique(d.ratings$Group))
 Nsubj <- rep(length(unique(d.ratings$Subject)), times=Ngrps)
-```
 
-```{r}
 dat.linear <- dump.format(list(x1 = x1, 
                                x2 = x2, 
                                y = y, 
@@ -409,17 +451,16 @@ dat.linear <- dump.format(list(x1 = x1,
                                Ngrps = Ngrps, 
                                Nsubj = Nsubj))
 
-inits1 <- dump.format(list(b0.mu=c(0, 0), b1.mu=c(0, 0), b2.mu = c(1, 1), sig=c(0.3, 0.3),
-                           .RNG.name="base::Super-Duper", .RNG.seed=99999 ))
-inits2 <- dump.format(list(b0.mu=c(1, 1), b1.mu=c(1, 1), b2.mu = c(0, 0), sig=c(0.1, 0.1), 
-                           .RNG.name="base::Wichmann-Hill", .RNG.seed=1234 ))
-inits3 <- dump.format(list(b0.mu=c(2, 2), b1.mu=c(-1, -1), b2.mu = c(1, 1), sig=c(0.5, 0.5),
-                           .RNG.name="base::Mersenne-Twister", .RNG.seed=6666 ))
+# Let JAGS initialize
+inits1 <- dump.format(list(.RNG.name="base::Super-Duper", .RNG.seed=99999 ))
+inits2 <- dump.format(list(.RNG.name="base::Wichmann-Hill", .RNG.seed=1234 ))
+inits3 <- dump.format(list(.RNG.name="base::Mersenne-Twister", .RNG.seed=6666 ))
 
 monitor <- c("b0.mu", "b1.mu", "b2.mu", "sig")
 ```
 
 ```{r}
+# Run JAGS model
 results.linear <- run.jags(model = "./models/LinearModel.txt", 
                            monitor = monitor, 
                            data = dat.linear, 
@@ -443,53 +484,54 @@ ggpairs(chains.linear, title="Correlation plot for linear model") + theme_minima
 ```
 
 ```{r}
-modelString <- "model{
-  for (g in 1:Ngrps) {
-    for (k in 2:nYlevels-2) {
-      thresh[k, g] ~ dnorm(k+0.5, 1/2^2)
-    }
+# Write in JAGS model
+modelString <- "model {
+	for (g in 1:Ngrps) {
+	  
+  	for (k in 2:(nYlevels-2)) {
+  		thresh[k, g] ~ dnorm(k+0.5, 1/2^2)
+  	}
+	  
+		b0.mu[g] ~ dnorm(0.0, 1.0E-5) # prior beta0
+		b1.mu[g] ~ dnorm(0.0, 1.0E-5) # prior beta1
+		b2.mu[g] ~ dnorm(0.0, 1.0E-5) # prior beta2
+
+		b0.sig[g] ~ dunif(1.0E-4, 100) # prior beta0 error
+		b1.sig[g] ~ dunif(1.0E-4, 100) # prior beta1 error
+		b2.sig[g] ~ dunif(1.0E-4, 100) # prior beta2 error
+
+		sig[g] ~ dunif(nYlevels/1000 , nYlevels*10) 
+    
+		for (s in 1:Nsubj[g]){
+			b0.s[s, g] ~ dnorm(b0.mu[g], 1/(b0.sig[g]^2))
+			b1.s[s, g] ~ dnorm(b1.mu[g], 1/(b1.sig[g]^2))
+			b2.s[s, g] ~ dnorm(b2.mu[g], 1/(b2.sig[g]^2))
+		}
+	}
+
+	for (i in 1:Ntotal) {
+		mu[i] <- b0.s[subIdx[i], grpIdx[i]] * 1.0   + 
+          	 b1.s[subIdx[i], grpIdx[i]] * x1[i] + 
+          	 b2.s[subIdx[i], grpIdx[i]] * x2[i]
   
-    b0.mu[g] ~ dnorm(0.0, 1.0E-5) # prior intercept
-    b1.mu[g] ~ dnorm(0.0, 1.0E-5) # prior coefficient1
-    b2.mu[g] ~ dnorm(0.0, 1.0E-5) # prior coefficient2
+		pr[i, 1] <- pnorm(thresh[1, grpIdx[i]] , mu[i] , 1/sig[grpIdx[i]]^2)
+		
+		for (k in 2:(nYlevels-1)) {
+			pr[i, k] <- max(0,  pnorm(thresh[k, grpIdx[i]], mu[i], 1/sig[grpIdx[i]]^2) - 
+												  pnorm(thresh[k-1, grpIdx[i]], mu[i], 1/sig[grpIdx[i]]^2))
+		}
+		
+		pr[i, nYlevels] <- 1 - pnorm(thresh[nYlevels-1, grpIdx[i]], mu[i], 1/sig[grpIdx[i]]^2) 
     
-    b0.sig[g] ~ dunif(1.0E-4, 100) # prior intercept error
-    b1.sig[g] ~ dunif(1.0E-4, 100) # prior coefficient1 error
-    b2.sig[g] ~ dunif(1.0E-4, 100) # prior coefficient2 error
-    
-    sig[g] ~ dunif(nYlevels/1000, nYlevels*10) # prior for sd
-    
-    for (s in 1:Nsubj[g]) {
-      b0.s[s, g] ~ dnorm(b0.mu[g], 1/b0.sig[g]^2)
-      b1.s[s, g] ~ dnorm(b1.mu[g], 1/b1.sig[g]^2)
-      b2.s[s, g] ~ dnorm(b2.mu[g], 1/b2.sig[g]^2)
-    }
-  }
-  
-  for (i in 1:Ntotal) {
-    mu[i] <- b0.s[subIdx[i], grpIdx[i]] + 
-      b1.s[subIdx[i], grpIdx[i]] * x1[i] + 
-      b2.s[subIdx[i], grpIdx[i]] * x2[i]
-    
-    pr[i, 1] <- pnorm(thresh[1, grpIdx[i]], mu[i], 1/sig[grpIdx[i]]^2)
-    
-    for (k in 2:nYlevels-1) {
-      pr[i, k] <- max(0, pnorm(thresh[k, grpIdx[i]], mu[i], 1/sig[grpIdx[i]]^2) - 
-                        pnorm(thresh[k-1, grpIdx[i]], mu[i], 1/sig[grpIdx[i]]^2))
-    }
-    
-    pr[i, nYlevels] <- 1 - pnorm(thresh[nYlevels-1, grpIdx[i]], mu[i], 1/sig[grpIdx[i]]^2)
-    
-    y[i] ~ dcat(pr[i, 1:nYlevels])
-  }
+		y[i] ~ dcat(pr[i,1:nYlevels])
+	}
 }"
 
 writeLines(modelString, con="./models/OrdinalModel.txt")
 ```
 
-
 ```{r}
-d.ratings <- read.csv("./data/ratings_data.csv") 
+# Prepare data list for JAGS
 x1 <- d.ratings$x1
 x2 <- d.ratings$x2
 y <- as.numeric(ordered(d.ratings$Rating))
@@ -498,54 +540,11 @@ subIdx <- d.ratings$Subject
 grpIdx <- as.numeric(as.factor(d.ratings$Group))
 Ngrps <- length(unique(d.ratings$Group))
 Nsubj <- rep(length(unique(d.ratings$Subject)), times=Ngrps)
-```
-
-```{r}
-nYlevels <- as.numeric(length(d.ratings$Rating))
-thresh <- matrix(NA, nrow=nYlevels-1, ncol=2)
-thresh[1, ] <- rep(1.5, 2)
-thresh[nYlevels-1, ] <- rep(nYlevels - 0.5, 2)
-
-dat.ordinal <- dump.format(list(x1 = x1, 
-                                x2 = x2, 
-                                y = y, 
-                                Ntotal = Ntotal, 
-                                subIdx = subIdx, 
-                                grpIdx = grpIdx, 
-                                Ngrps = Ngrps, 
-                                Nsubj = Nsubj, 
-                                nYlevels = nYlevels, 
-                                thresh = thresh))
-
-inits1 <- dump.format(list(.RNG.name="base::Super-Duper", .RNG.seed=99999))
-inits2 <- dump.format(list(.RNG.name="base::Wichmann-Hill", .RNG.seed=1234))
-inits3 <- dump.format(list(.RNG.name="base::Mersenne-Twister", .RNG.seed=6666))
-
-monitor = c("b0.mu", "b1.mu", "b2.mu", "sig", "thresh")
-```
-
-
-
-
-
-
-```{r}
-d.ratings <- read.csv("./data/ratings_data.csv") 
-
-x1 <- d.ratings$x1
-x2 <- d.ratings$x2
-y <- as.numeric(ordered(d.ratings$Rating))
-Ntotal <- length(y)
-subIdx <- d.ratings$Subject
-grpIdx <- as.numeric(as.factor(d.ratings$Group))
-Ngrps <- length(unique(d.ratings$Group))
-Nsubj <- rep(length(unique(d.ratings$Subject)), times=Ngroups)
 nYlevels <- as.numeric(length(unique(d.ratings$Rating)))
 
 thresh = matrix(NA, nrow = nYlevels-1, ncol = 2)
 thresh[1, ] <- rep(1.5, 2)
 thresh[nYlevels-1, ] <- rep(nYlevels - 0.5, 2)
-
 
 dat <- dump.format(list(x1=x1, 
                         x2=x2, 
@@ -558,6 +557,7 @@ dat <- dump.format(list(x1=x1,
                         nYlevels = nYlevels, 
                         thresh = thresh))
 
+# Let JAGS initialize
 inits1 <- dump.format(list( .RNG.name="base::Super-Duper", .RNG.seed=99999 ))
 inits2 <- dump.format(list( .RNG.name="base::Wichmann-Hill", .RNG.seed=1234 ))
 inits3 <- dump.format(list( .RNG.name="base::Mersenne-Twister", .RNG.seed=6666 ))
@@ -572,7 +572,7 @@ n.burnin <- 1000
 n.thin <- 2
 n.chains <- 3
 
-results.ordinal <- run.jags(model = "models/ordinalHierRegr.txt", 
+results.ordinal <- run.jags(model = "models/OrdinalModel.txt", 
                             monitor = monitor, 
                             data = dat, 
                             n.chains = 3, 
@@ -592,26 +592,34 @@ chains.ordinal <- data.frame(rbind(results.ordinal[["mcmc"]][[1]],
                                    results.ordinal[["mcmc"]][[2]], 
                                    results.ordinal[["mcmc"]][[3]]))
 
+# Drop rows with NAs except for the mode column
 ggpairs(chains.ordinal[, c(1:8, 10:11, 14:15)], title="Correlation plot for ordinal model") + theme_minimal()
 ```
 
-<!-- * In the **Metric** model within **Group A** across beta estimates: -->
-<!--   + Contrast1: $\beta_{1A}^{M}-\beta_{2A}^{M}$ -->
-<!-- * In the **Metric** model within **Group B** across beta estimates: -->
-<!--   + Contrast2: $\beta_{1B}^{M}-\beta_{2B}^{M}$ -->
-<!-- * In the **Ordinal** model within **Group A** across beta estimates: -->
-<!--   + Contrast3: $\beta_{1A}^{O}-\beta_{2A}^{O}$ -->
-<!-- * In the **Ordinal** model within **Group B** across beta estimates: -->
-<!--   + Contrast4: $\beta_{1B}^{O}-\beta_{2B}^{O}$ -->
-<!-- * Within **Group A** for $\beta_1$ across two models: -->
-<!--   + Contrast5: $\beta_{1A}^{M}-\beta_{1A}^{O}$ -->
-<!-- * Within **Group A** for $\beta_2$ across two models:   -->
-<!--   + Contrast6: $\beta_{2A}^{M}-\beta_{2A}^{O}$ -->
-<!-- * Within **Group B** for $\beta_1$ across two models: -->
-<!--   + Contrast5: $\beta_{1B}^{M}-\beta_{1B}^{O}$ -->
-<!-- * Within **Group B** for $\beta_2$ across two models:   -->
-<!--   + Contrast6: $\beta_{2B}^{M}-\beta_{2B}^{O}$ -->
-  
+
+#### Contrasts
+
+Contrasts are constructed based on the difference between sample posterior distributions of parameters:
+
+(a) Linear (metric) model
+    (i) $\mu_{\beta_1}^{A}-\mu_{\beta_2}^{A}$ for group A
+    (ii) $\mu_{\beta_1}^{B}-\mu_{\beta_2}^{B}$ for group B
+(b) Ordinal model
+    (i) $\mu_{\beta_1}^{A}-\mu_{\beta_2}^{A}$ for group A
+    (ii) $\mu_{\beta_1}^{B}-\mu_{\beta_2}^{B}$ for group B
+(c) $\text{Linear }\mu_{\beta_1}^{A} - \text{Ordinal }\mu_{\beta_1}^{A}$
+(d) $\text{Linear }\mu_{\beta_2}^{A} - \text{Ordinal }\mu_{\beta_2}^{A}$
+(e) $\text{Linear }\mu_{\beta_1}^{B} - \text{Ordinal }\mu_{\beta_1}^{B}$
+(f) $\text{Linear }\mu_{\beta_2}^{B} - \text{Ordinal }\mu_{\beta_2}^{B}$
+(g) $(\text{Linear }\mu_{\beta_1}^{A}-\text{Linear }\mu_{\beta_2}^{A})-(\text{Ordinal }\mu_{\beta_1}^{A}-\text{Ordinal }\mu_{\beta_2}^{A})$
+(h) $(\text{Linear }\mu_{\beta_1}^{B}-\text{Linear }\mu_{\beta_2}^{B})-(\text{Ordinal }\mu_{\beta_1}^{B}-\text{Ordinal }\mu_{\beta_2}^{B})$
+
+The posterior probability of superiority (PPS) is defined as follows:
+
+$$
+\text{PPS}=P(\text{contrast}>0)
+$$
+
 ```{r}
 contrast.a1 <- chains.linear[, "b1.mu.1."] - chains.linear[, "b2.mu.1."]
 contrast.a2 <- chains.linear[, "b1.mu.2."] - chains.linear[, "b2.mu.2."]
@@ -629,73 +637,143 @@ contrast.g <- (contrast.a1 - contrast.b1)
 contrast.h <- (contrast.a2 - contrast.b2)
 ```
 
+
+```{r}
+cols <- c("aquamarine", "blue", "chocolate", "cyan", "green", "orange", "pink", "purple", "seagreen", "tomato")
+barplot(rep(1, length(cols)), col=cols)
+```
+
 ```{r}
 ggplot(data.frame(x=contrast.a1), aes(x=x, y=..density..)) + 
-  geom_histogram(bins=30, alpha=0.2, color=3, fill=3) + 
+  geom_histogram(bins=30, alpha=0.2, color=cols[1], fill=cols[1]) + 
   geom_vline(xintercept=hdi(contrast.a1), color=2, lty="longdash") +
-  labs(title="Contrast for a(i)", y="Frequency density") + theme_minimal()
+  labs(title="(beta1-beta2) group A linear", y="Density") + theme_minimal()
+```
+
+```{r}
+## Calculate posterior probability of superiority
+pps.contrast.a1 <- mean(contrast.a1 > 0); pps.contrast.a1
 ```
 
 ```{r}
 ggplot(data.frame(x=contrast.a2), aes(x=x, y=..density..)) + 
-  geom_histogram(bins=30, alpha=0.2, color=4, fill=4) + 
+  geom_histogram(bins=30, alpha=0.2, color=cols[2], fill=cols[2]) + 
   geom_vline(xintercept=hdi(contrast.a2), color=2, lty="longdash") +
-  labs(title="Contrast for a(ii)", y="Frequency density") + theme_minimal()
+  labs(title="(beta1-beta2) group B linear", y="Density") + theme_minimal()
 ```
 
+```{r}
+## Calculate posterior probability of superiority
+pps.contrast.a2 <- mean(contrast.a2 > 0); pps.contrast.a2
+```
 
 ```{r}
 ggplot(data.frame(x=contrast.b1), aes(x=x, y=..density..)) + 
-  geom_histogram(bins=30, alpha=0.2, color=5, fill=5) + 
+  geom_histogram(bins=30, alpha=0.2, color=cols[3], fill=cols[3]) + 
   geom_vline(xintercept=hdi(contrast.b1), color=2, lty="longdash") +
-  labs(title="Contrast for b(i)", y="Frequency density") + theme_minimal()
+  labs(title="Contrast for b(i)", y="Density") + theme_minimal()
+```
+
+```{r}
+## Calculate posterior probability of superiority
+pps.contrast.b1 <- mean(contrast.b1 > 0); pps.contrast.b1
 ```
 
 ```{r}
 ggplot(data.frame(x=contrast.b2), aes(x=x, y=..density..)) + 
-  geom_histogram(bins=30, alpha=0.2, color=6, fill=6) + 
+  geom_histogram(bins=30, alpha=0.2, color=cols[4], fill=cols[4]) + 
   geom_vline(xintercept=hdi(contrast.b2), color=2, lty="longdash") +
-  labs(title="Contrast for b(ii)", y="Frequency density") + theme_minimal()
+  labs(title="Contrast for b(ii)", y="Density") + theme_minimal()
+```
+
+```{r}
+## Calculate posterior probability of superiority
+pps.contrast.b2 <- mean(contrast.b2 > 0); pps.contrast.b2
 ```
 
 ```{r}
 ggplot(data.frame(x=contrast.c), aes(x=x, y=..density..)) + 
-  geom_histogram(bins=30, alpha=0.2, color=7, fill=7) + 
+  geom_histogram(bins=30, alpha=0.2, color=cols[5], fill=cols[5]) + 
   geom_vline(xintercept=hdi(contrast.c), color=2, lty="longdash") +
-  labs(title="Contrast for c", y="Frequency density") + theme_minimal()
+  labs(title="Contrast for c", y="Density") + theme_minimal()
+```
+
+```{r}
+## Calculate posterior probability of superiority
+pps.contrast.c <- mean(contrast.c > 0); pps.contrast.c
 ```
 
 ```{r}
 ggplot(data.frame(x=contrast.d), aes(x=x, y=..density..)) + 
-  geom_histogram(bins=30, alpha=0.2, color=8, fill=8) + 
+  geom_histogram(bins=30, alpha=0.2, color=cols[6], fill=cols[6]) + 
   geom_vline(xintercept=hdi(contrast.d), color=2, lty="longdash") +
-  labs(title="Contrast for d", y="Frequency density") + theme_minimal()
+  labs(title="Contrast for d", y="Density") + theme_minimal()
+```
+
+```{r}
+## Calculate posterior probability of superiority
+pps.contrast.d <- mean(contrast.d > 0); pps.contrast.d
 ```
 
 ```{r}
 ggplot(data.frame(x=contrast.e), aes(x=x, y=..density..)) + 
-  geom_histogram(bins=30, alpha=0.2, color=9, fill=9) + 
+  geom_histogram(bins=30, alpha=0.2, color=cols[7], fill=cols[7]) + 
   geom_vline(xintercept=hdi(contrast.e), color=2, lty="longdash") +
-  labs(title="Contrast for e", y="Frequency density") + theme_minimal()
+  labs(title="Contrast for e", y="Density") + theme_minimal()
+```
+
+```{r}
+## Calculate posterior probability of superiority
+pps.contrast.e <- mean(contrast.e > 0); pps.contrast.e
 ```
 
 ```{r}
 ggplot(data.frame(x=contrast.f), aes(x=x, y=..density..)) + 
-  geom_histogram(bins=30, alpha=0.2, color=10, fill=10) + 
+  geom_histogram(bins=30, alpha=0.2, color=cols[8], fill=cols[8]) + 
   geom_vline(xintercept=hdi(contrast.f), color=2, lty="longdash") +
-  labs(title="Contrast for f", y="Frequency density") + theme_minimal()
+  labs(title="Contrast for f", y="Density") + theme_minimal()
+```
+
+```{r}
+## Calculate posterior probability of superiority
+pps.contrast.f <- mean(contrast.f > 0); pps.contrast.f
 ```
 
 ```{r}
 ggplot(data.frame(x=contrast.g), aes(x=x, y=..density..)) + 
-  geom_histogram(bins=30, alpha=0.2, color=11, fill=11) + 
+  geom_histogram(bins=30, alpha=0.2, color=cols[9], fill=cols[9]) + 
   geom_vline(xintercept=hdi(contrast.g), color=2, lty="longdash") +
-  labs(title="Contrast for g", y="Frequency density") + theme_minimal()
+  labs(title="Contrast for g", y="Density") + theme_minimal()
+```
+
+```{r}
+## Calculate posterior probability of superiority
+pps.contrast.g <- mean(contrast.g > 0); pps.contrast.g
 ```
 
 ```{r}
 ggplot(data.frame(x=contrast.h), aes(x=x, y=..density..)) + 
-  geom_histogram(bins=30, alpha=0.2, color=12, fill=12) + 
+  geom_histogram(bins=30, alpha=0.2, color=cols[10], fill=cols[10]) + 
   geom_vline(xintercept=hdi(contrast.h), color=2, lty="longdash") +
-  labs(title="Contrast for h", y="Frequency density") + theme_minimal()
+  labs(title="Contrast for h", y="Density") + theme_minimal()
 ```
+
+```{r}
+## Calculate posterior probability of superiority
+pps.contrast.h <- mean(contrast.h > 0); pps.contrast.h
+```
+
+```{r}
+pps.summary <- data.frame(
+  c(pps.contrast.a1, pps.contrast.a2, pps.contrast.b1, pps.contrast.b2, pps.contrast.c, 
+    pps.contrast.d, pps.contrast.e, pps.contrast.f, pps.contrast.g, pps.contrast.h)
+)
+colnames(pps.summary) <- "PPS"
+rownames(pps.summary) <- c("Contrast a(i)", "Contrast a(ii)", 
+                           "Contrast b(i)", "Contrast b(ii)", 
+                           "Contrast c", "Contrast d", 
+                           "Contrast e", "Contrast f", 
+                           "Contrast g", "Contrast h")
+knitr::kable(pps.summary, align="c", digits=4)
+```
+
