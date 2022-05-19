@@ -1,5 +1,5 @@
 ---
-title: "Assignment 2"
+title: "Assignment 3"
 subtitle: "Bayesian Data Analysis and Models of Behavior"
 author: "Wenjie Tu"
 date: "Spring Semester 2022"
