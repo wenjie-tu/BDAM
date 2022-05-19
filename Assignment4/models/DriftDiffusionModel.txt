@@ -1,0 +1,89 @@
+model {
+  # Prior
+  eta_g_mu ~ dunif(0, 1) # learning rate parameter
+  eta_g_sig ~ dunif(0.001, 5)
+  
+  m_g_mu ~ dunif(1, 19) # drift rate saling parameter
+  m_g_sig ~ dunif(0.001, 5)
+  
+  beta_g_mu ~ dunif(0, 1) # sensitivity parameter
+  beta_g_sig ~ dunif(0.001, 5)
+  
+  # Transform sigma to precision
+  eta_g_tau <- 1 / eta_g_sig^2
+  m_g_tau <- 1 / m_g_sig^2
+  beta_g_tau <- 1 / beta_g_sig^2
+  
+  # Group parameters
+  for (g in 1:G) {
+    # dual learning rates
+    for (v in 1:2) {
+      eta_g[g, v] ~ dnorm(eta_g_mu, eta_g_tau)T(0, 1)
+      eta_sig[g, v] ~ dunif(0.001, 5)
+      eta_tau[g, v] <- 1 / eta_sig[g, v]^2
+    }
+    
+    m_g[g] ~ dnorm(m_g_mu, m_g_tau)
+    m_sig[g] ~ dunif(0.001, 5)
+    m_tau[g] <- 1 / m_sig[g]^2
+    
+    beta_g[g] ~ dnorm(beta_g_mu, beta_g_tau)
+    beta_sig[g] ~ dunif(0.001, 5)
+    beta_tau[g] <- 1 / beta_sig[g]^2
+  }
+  
+  # Subject parameters
+  for (g in 1:G) {
+    for (s in 1:S) {
+      for (v in 1:2) {
+        eta[g, s, v] ~ dnorm(eta_g[g, v], eta_tau[g, v])T(0, 1)
+      }
+      beta[g, s] ~ dnorm(beta_g[g], beta_tau[g])
+      m[g, s] ~ dnorm(m_g[g], m_tau[g])
+    }
+  }
+  
+  # Loop over trials for each group and subject
+  for (g in 1:G) {
+    for (s in 1:S) {
+      #Assign starting values to q[group,trial,stimulus pair,option].
+      #'first' is a two-dimensional-array identifying first trial for each subject in each group.
+      for (stim_pair in 1:3) {
+        q[g, first[s, g], stim_pair, 1] <- 0
+        q[g, first[s, g], stim_pair, 2] <- 0
+      }
+      # Run through trials
+      # 'last' is a two-dimensional-array identifying last trial for each subject in each group.
+      for (trial in (first[s, g]):(last[s, g]-1)) {
+        # Calculate drift rate parameter as q-delta multiplied by m
+        v[trial] <- ( q[g, trial, pair[trial], 1] - q[g, trial, pair[trial], 2] ) * m[g, s]
+        
+        pr[trial] <- ilogit(beta[g,s] + v[trial])
+        rt_binary[trial] ~ dbern(pr[trial])
+	      rt_predict[trial] ~ dbern(pr[trial])
+	      
+	      # Update q-values for next trial. 
+        # 'pair' identifies the stimulus pair in the current trial 'not1' and 'not2' identifies the other stimulus pairs.
+        q[g, trial+1, pair[trial], choice[trial]] <- q[g, trial, pair[trial], choice[trial]] + 
+          eta[g, s, valence[trial]] * (value[trial] - q[g, trial, pair[trial], choice[trial]])
+        
+        q[g, trial+1, pair[trial], nonchoice[trial]] <- q[g, trial, pair[trial], nonchoice[trial]]
+        q[g, trial+1, not1[trial], 1] <- q[g, trial, not1[trial], 1]
+        q[g, trial+1, not1[trial], 2] <- q[g, trial, not1[trial], 2]
+        q[g, trial+1, not2[trial], 1] <- q[g, trial, not2[trial], 1]
+        q[g, trial+1, not2[trial], 2] <- q[g, trial, not2[trial], 2]
+      }
+      
+      # Q-values are not updated in last trial
+      for (trial in last[s, g]) {
+        v[trial] <- (q[g, trial, pair[trial], 1] - q[g, trial, pair[trial], 2]) * m[g, s]
+        
+        # following the paper, beta is modeled using the power function and depends on t
+        pr[trial] <- ilogit(beta[g, s] + v[trial])
+        
+        rt_binary[trial] ~ dbern(pr[trial])
+	      rt_predict[trial] ~ dbern(pr[trial])
+      }
+    }
+  }
+}
