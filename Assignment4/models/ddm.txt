@@ -1,15 +1,17 @@
 model {
-  # Prior
-  eta_g_mu ~ dunif(0, 1) # learning rate parameter
+  # Prior for the learning rate parameter eta
+  eta_g_mu ~ dunif(0, 1)
   eta_g_sig ~ dunif(0.001, 5)
   
-  m_g_mu ~ dunif(1, 19) # drift rate saling parameter
+  # Prior for the drift rate saling parameter m
+  m_g_mu ~ dunif(1, 19) 
   m_g_sig ~ dunif(0.001, 5)
   
-  beta_g_mu ~ dunif(0, 1) # sensitivity parameter
+  # Prior for the sensitivity parameter beta
+  beta_g_mu ~ dunif(0, 1)
   beta_g_sig ~ dunif(0.001, 5)
   
-  # Transform sigma to precision
+  # Transform sigma into precision
   eta_g_tau <- 1 / eta_g_sig^2
   m_g_tau <- 1 / m_g_sig^2
   beta_g_tau <- 1 / beta_g_sig^2
@@ -18,7 +20,7 @@ model {
   for (g in 1:G) {
     # Dual learning rates
     for (v in 1:2) {
-      eta_g[g, v] ~ dnorm(eta_g_mu, eta_g_tau)T(0, 1)
+      eta_g[g, v] ~ dnorm(eta_g_mu, eta_g_tau)T(0, 1) # Truncation
       eta_sig[g, v] ~ dunif(0.001, 5)
       eta_tau[g, v] <- 1 / eta_sig[g, v]^2
     }
@@ -36,7 +38,7 @@ model {
   for (g in 1:G) {
     for (s in 1:S) {
       for (v in 1:2) {
-        eta[g, s, v] ~ dnorm(eta_g[g, v], eta_tau[g, v])T(0, 1)
+        eta[g, s, v] ~ dnorm(eta_g[g, v], eta_tau[g, v])T(0, 1) # Truncation 
       }
       beta[g, s] ~ dnorm(beta_g[g], beta_tau[g])
       m[g, s] ~ dnorm(m_g[g], m_tau[g])
@@ -46,12 +48,13 @@ model {
   # Loop over trials for each group and subject
   for (g in 1:G) {
     for (s in 1:S) {
-      #Assign starting values to q[group,trial,stimulus pair,option].
-      #'first' is a two-dimensional-array identifying first trial for each subject in each group.
+      # Assign starting values to q[group,trial,stimulus pair,option].
+      # 'first' is a two-dimensional-array identifying first trial for each subject in each group.
       for (stim_pair in 1:3) {
         q[g, first[s, g], stim_pair, 1] <- 0
         q[g, first[s, g], stim_pair, 2] <- 0
       }
+      
       # Run through trials
       # 'last' is a two-dimensional-array identifying last trial for each subject in each group.
       for (trial in (first[s, g]):(last[s, g]-1)) {
