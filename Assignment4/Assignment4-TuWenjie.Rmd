@@ -53,12 +53,14 @@ The drift rate $\nu(t)$ varies from trial to trial as a function of the differen
 $$
 \nu(t)=[V_\text{upper}(t)-V_\text{lower}(t)]\times m
 $$
+
 * $V_\text{upper}(t)$ and $V_\text{lower}(t)$ represent the reward expectations for the two response options.
 
 The process of choosing between options can be described by the sigmoid (ilogit) function:
 $$
 p_i(t)=\frac{1}{1+\exp\{-(\beta(t)+\nu(t))\}}
 $$
+
 * $p_i(t)$: the probability that a decision maker will choose one option $i$ among all options $j$.
 * $\beta$: the parameter that governs the sensitivity to rewards and the exploration-exploitation trade-off.
 
@@ -308,7 +310,7 @@ ggplot(chains.ddm, aes(x=ON.negative - OFF.negative, y=..density..)) +
 
 #### Interpretations
 
-The posterior distribution of differences for ADHD subjects on vs. off stimulant medication for positive learning rate is consistent with what is shown in the paper. Both are left-skewed. However, the posterior distribution of differences for ADHD subjects on vs. off stimulant medication for negative learning rate is not consistent well with what is presented in the paper in terms of skewness, which is probably due to the randomness in the algorithm. Since initial values are not pre-defined for each chain and JAGS initializes chains automatically, the results are not reproducible even we specify the random number generators and random number seeds.
+The posterior distribution of differences for attention-deficit-hyper-activity disorder (ADHD) subjects on vs. off stimulant medication for positive learning rate is consistent with what is shown in the paper. Both are left-skewed. However, the posterior distribution of differences for ADHD subjects on vs. off stimulant medication for negative learning rate seems not consistent well with what is presented in the paper in terms of skewness, which is probably due to the randomness in the algorithm. Since initial values are not pre-defined for each chain and JAGS initializes chains automatically, the results are not reproducible even we specify the random number generators and random number seeds. Furthermore, the 95% HDI for the difference between ON and OFF medication for the negative learning rate is wider than what is presented in the paper.
 
 
 $~$
