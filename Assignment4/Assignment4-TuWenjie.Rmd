@@ -16,18 +16,20 @@ Sys.setenv(lang="us_en")
 rm(list=ls())
 ```
 
+The goal of this assignment is to verify the implicit assumption in Pedersen et al. (2017) that the DDM will yield more precise estimates of the learning rate parameters than the softmax choice rule (i.e., logistic regression) typically used in the studies of reward learning.
+
 $~$
 
 ### Part 1
 
-$V_i(t)$ is calculated by summing the reward expectation from the previous trial and the reward prediction error (PE):
+$Q_i(t)$ is calculated by summing the reward expectation from the previous trial and the reward prediction error (PE):
 
 $$
-V_i(t)=V_i(t-1)+\eta
-\underbrace{[\text{Reward}_i(t-1)-V_i(t-1)]}_\text{prediction error (PE)}
+Q_i(t)=Q_i(t-1)+\eta
+\underbrace{[\text{Reward}_i(t-1)-Q_i(t-1)]}_\text{prediction error (PE)}
 $$
 
-* $V_i(t)$: the reward value expectation for the chosen option $i$ on trial $t$.
+* $Q_i(t)$: the reward value expectation for the chosen option $i$ on trial $t$.
 * $\eta$: the learning rate parameter.
 
 <!-- The process of choosing between options can be described by the softmax choice rule: -->
@@ -35,6 +37,7 @@ $$
 <!-- p_i(t)=\frac{\exp(\beta(t)\times V_i(t))} -->
 <!-- {\sum_{j=1}^{n}\exp(\beta(t)\times V_j(t))} -->
 <!-- $$ -->
+
 
 <!-- * $p_i(t)$: the probability that a decision maker will choose one option $i$ among all options $j$. -->
 <!-- * $\beta$: the parameter that governs the sensitivity to rewards and the exploration-exploitation trade-off. -->
@@ -49,12 +52,13 @@ $$
 <!-- * $a$: boundary separation (trial-independent free parameters). -->
 <!-- * $\nu(t)$: drift rate. -->
 
+
 The drift rate $\nu(t)$ varies from trial to trial as a function of the difference in the expected rewards, multiplied by a scaling parameter $m$, which can capture differences in the ability to use knowledge of the reward probabilities:
 $$
-\nu(t)=[V_\text{upper}(t)-V_\text{lower}(t)]\times m
+\nu(t)=[Q_\text{upper}(t)-Q_\text{lower}(t)]\times m
 $$
 
-* $V_\text{upper}(t)$ and $V_\text{lower}(t)$ represent the reward expectations for the two response options.
+* $Q_\text{upper}(t)$ and $Q_\text{lower}(t)$ represent the reward expectations for the two response options.
 
 The process of choosing between options can be described by the sigmoid (ilogit) function:
 $$
@@ -177,7 +181,7 @@ modelString <- "model {
   }
 }"
 
-writeLines(modelString, con="./models/ddm.txt")
+writeLines(modelString, con="./models/logistic.txt")
 ```
 
 ```{r}
@@ -222,7 +226,7 @@ params <- c("eta_g", "eta", "m_g", "m", "beta_g", "beta")
 ```{r}
 # Run the function that fits the models using JAGS
 start.time <- Sys.time()
-results.ddm <- run.jags(model = "./models/ddm.txt", 
+results.log <- run.jags(model = "./models/logistic.txt", 
                         monitor = params, 
                         data = dat.jags, 
                         inits = c(inits1, inits2, inits3), #, inits4),
@@ -240,28 +244,28 @@ end.time  - start.time
 ```
 
 ```{r}
-kable(summary(results.ddm), digits=6, caption="Summary results for the logistic regression")
+kable(summary(results.log), digits=6, caption="Summary results for the logistic regression")
 ```
 
-#### Histogram and density plot for learning rate
+#### Density plot for learning rates
 
 ```{r}
-chains.ddm <- data.frame(rbind(results.ddm$mcmc[[1]], results.ddm$mcmc[[2]], results.ddm$mcmc[[3]]))
+chains.log <- data.frame(rbind(results.log$mcmc[[1]], results.log$mcmc[[2]], results.log$mcmc[[3]]))
 
 # Select columns for group-level learning rate parameters
-chains.ddm <- chains.ddm[, 1:4]
+chains.log <- chains.log[, 1:4]
 
 column.names <- c("OFF.negative", "ON.negative", "OFF.positive", "ON.positive")
-colnames(chains.ddm) <- column.names
+colnames(chains.log) <- column.names
 ```
 
 ```{r}
 d.plot <- data.frame(
-  eta_g = c(chains.ddm$OFF.negative, 
-            chains.ddm$ON.negative, 
-            chains.ddm$OFF.positive, 
-            chains.ddm$ON.positive), 
-  Group = rep(column.names, each=nrow(chains.ddm))
+  eta_g = c(chains.log$OFF.negative, 
+            chains.log$ON.negative, 
+            chains.log$OFF.positive, 
+            chains.log$ON.positive), 
+  Group = rep(column.names, each=nrow(chains.log))
 )
 ```
 
@@ -272,20 +276,20 @@ ggplot(d.plot, aes(x=eta_g, y=..density.., color=Group, fill=Group)) +
   theme_minimal()
 ```
 
-#### Histogram and density plot for difference
+#### Density plot for differences
 
 ```{r, fig.show='hold', out.width='50%'}
 # Histogram
-ggplot(chains.ddm, aes(x=ON.positive - OFF.positive, y=..density..)) + 
+ggplot(chains.log, aes(x=ON.positive - OFF.positive, y=..density..)) + 
   geom_histogram(color=3, fill=3, alpha=0.2, bins=30) + 
-  geom_vline(xintercept=hdi(chains.ddm$ON.positive - chains.ddm$OFF.positive), color=2, lty="longdash") + 
+  geom_vline(xintercept=hdi(chains.log$ON.positive - chains.log$OFF.positive), color=2, lty="longdash") + 
   labs(title="Positive learning rate (ON-OFF)", x=expression(eta^"+" ~ "(ON-OFF)"), y="Density") + 
   theme_minimal()
 
 # Density plot
-ggplot(chains.ddm, aes(x=ON.positive - OFF.positive, y=..density..)) + 
+ggplot(chains.log, aes(x=ON.positive - OFF.positive, y=..density..)) + 
   geom_density(color=3, fill=3, alpha=0.2) + 
-  geom_vline(xintercept=hdi(chains.ddm$ON.positive - chains.ddm$OFF.positive), color=2, lty="longdash") + 
+  geom_vline(xintercept=hdi(chains.log$ON.positive - chains.log$OFF.positive), color=2, lty="longdash") + 
   labs(title="Positive learning rate (ON-OFF)", x=expression(eta^"+" ~ "(ON-OFF)"), y="Density") + 
   theme_minimal()
 ```
@@ -293,16 +297,16 @@ ggplot(chains.ddm, aes(x=ON.positive - OFF.positive, y=..density..)) +
 
 ```{r, fig.show='hold', out.width='50%'}
 # Histogram
-ggplot(chains.ddm, aes(x=ON.negative - OFF.negative, y=..density..)) + 
+ggplot(chains.log, aes(x=ON.negative - OFF.negative, y=..density..)) + 
   geom_histogram(color=4, fill=4, alpha=0.2, bins=30) + 
-  geom_vline(xintercept=hdi(chains.ddm$ON.negative - chains.ddm$OFF.negative), color=2, lty="longdash") +
+  geom_vline(xintercept=hdi(chains.log$ON.negative - chains.log$OFF.negative), color=2, lty="longdash") +
   labs(title="Negative learning rate (ON-OFF)", x=expression(eta^"-" ~ "(ON-OFF)"), y="Density") + 
   theme_minimal()
 
 # Density plot
-ggplot(chains.ddm, aes(x=ON.negative - OFF.negative, y=..density..)) + 
+ggplot(chains.log, aes(x=ON.negative - OFF.negative, y=..density..)) + 
   geom_density(color=4, fill=4, alpha=0.2) + 
-  geom_vline(xintercept=hdi(chains.ddm$ON.negative - chains.ddm$OFF.negative), color=2, lty="longdash") +
+  geom_vline(xintercept=hdi(chains.log$ON.negative - chains.log$OFF.negative), color=2, lty="longdash") +
   labs(title="Negative learning rate (ON-OFF)", x=expression(eta^"-" ~ "(ON-OFF)"), y="Density") + 
   theme_minimal()
 ```
@@ -320,8 +324,8 @@ $~$
 #### Summary table
 
 ```{r}
-model.sim <- extend.jags(results.ddm, 
-                         drop.monitor = results.ddm$monitor, 
+model.sim <- extend.jags(results.log, 
+                         drop.monitor = results.log$monitor, 
                          add.monitor = c("rt_predict"), 
                          sample = 1, 
                          adapt = 0, 
@@ -354,7 +358,7 @@ params <- c("eta_g", "eta", "m_g", "m", "beta_g", "beta")
 
 ```{r}
 start.time <- Sys.time()
-results.rec <- run.jags(model = "./models/ddm.txt", 
+results.rec <- run.jags(model = "./models/logistic.txt", 
                         monitor = params, 
                         data = newdat.jags, 
                         inits = c(inits1, inits2, inits3), 
@@ -371,11 +375,11 @@ end.time <- Sys.time()
 end.time - start.time
 ```
 
-#### Summary table
-
 ```{r}
 kable(summary(results.rec), digits=6, caption="Summary results for the logistic regression (simulated data)")
 ```
+
+#### Boxplots
 
 ```{r}
 chains.rec <- data.frame(rbind(results.rec$mcmc[[1]], results.rec$mcmc[[2]], results.rec$mcmc[[3]]))
@@ -388,26 +392,31 @@ colnames(chains.rec) <- column.names
 ```
 
 ```{r}
-d.recovery <- data.frame(rbind(chains.ddm, chains.rec), 
-                         Parameters = rep(c("Generating", "Recovered"), each=nrow(chains.ddm)))
+d.recovery <- data.frame(rbind(chains.log, chains.rec), 
+                         Parameters = rep(c("Logistic", "Recovered"), each=nrow(chains.log)))
 ```
 
 ```{r, out.width='100%'}
 ggplot(d.recovery, aes(x=Parameters, y=OFF.negative, color=Parameters)) + geom_boxplot() + 
-  labs(title="Negative learning rate for the OFF medication group", x=expression(eta^"-")) + theme_minimal()
+  labs(title="Negative learning rate for the OFF medication group", x=expression(eta^"-"~"(OFF)")) + theme_minimal()
 ```
 
 ```{r, out.width='100%'}
 ggplot(d.recovery, aes(x=Parameters, y=ON.negative, color=Parameters)) + geom_boxplot() +
-  labs(title="Negative learning rate for the ON medication group", x=expression(eta^"-")) + theme_minimal()
+  labs(title="Negative learning rate for the ON medication group", x=expression(eta^"-"~"(ON)")) + theme_minimal()
 ```
 
 ```{r, out.width='100%'}
 ggplot(d.recovery, aes(x=Parameters, y=OFF.positive, color=Parameters)) + geom_boxplot() + 
-  labs(title="Positive learning rate for the OFF medication group", x=expression(eta^"+")) + theme_minimal()
+  labs(title="Positive learning rate for the OFF medication group", x=expression(eta^"+"~"(OFF)")) + theme_minimal()
 ```
 
 ```{r, out.width='100%'}
 ggplot(d.recovery, aes(x=Parameters, y=ON.positive, color=Parameters)) + geom_boxplot() +
-  labs(title="Positive learning rate for the ON medication group", x=expression(eta^"+")) + theme_minimal()
+  labs(title="Positive learning rate for the ON medication group", x=expression(eta^"+"~"(ON)")) + theme_minimal()
 ```
+
+#### Interpretations
+
+We present four boxplots of the posterior chains for four group-level learning rates (ON-positive, ON-negative, OFF-positive, OFF-negative) from both logistic regression results (Part 1) and parameter recovery results. We see that significant differences between the parameter recovery results and the logistic regression results for four group-level learning rates. In particular, such difference is even larger for the On medication group with positive learning rate. We therefore conclude that the decision-making process is better characterized by the DDM. This also confirms the assumption that the DDM outperforms the rewarding model using softmax choice rule in terms of learning parameter estimation.
+
