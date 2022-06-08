@@ -312,7 +312,7 @@ ggplot(chains.log, aes(x=ON.negative - OFF.negative, y=..density..)) +
 ```
 
 
-#### Interpretations
+#### Interpretation
 
 The posterior distribution of differences for attention-deficit-hyper-activity disorder (ADHD) subjects on vs. off stimulant medication for positive learning rate is consistent with what is shown in the paper. Both are left-skewed. However, the posterior distribution of differences for ADHD subjects on vs. off stimulant medication for negative learning rate seems not consistent well with what is presented in the paper in terms of skewness, which is probably due to the randomness in the algorithm. Since initial values are not pre-defined for each chain and JAGS initializes chains automatically, the results are not reproducible even we specify the random number generators and random number seeds. Furthermore, the 95% HDI for the difference between ON and OFF medication for the negative learning rate is wider than what is presented in the paper.
 
@@ -416,7 +416,7 @@ ggplot(d.recovery, aes(x=Parameters, y=ON.positive, color=Parameters)) + geom_bo
   labs(title="Positive learning rate for the ON medication group", x=expression(eta^"+"~"(ON)")) + theme_minimal()
 ```
 
-#### Interpretations
+#### Interpretation
 
 We present four boxplots of the posterior chains for four group-level learning rates (ON-positive, ON-negative, OFF-positive, OFF-negative) from both logistic regression results (Part 1) and parameter recovery results. We see that significant differences between the parameter recovery results and the logistic regression results for four group-level learning rates. In particular, such difference is even larger for the On medication group with positive learning rate. We therefore conclude that the decision-making process is better characterized by the DDM. This also confirms the assumption that the DDM outperforms the rewarding model using softmax choice rule in terms of learning parameter estimation.
 
